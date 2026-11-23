@@ -176,7 +176,90 @@ Tam veride ham CSV 2.434 MB, temiz Parquet 822 MB (**2,96 kat** küçük), üste
 Ayrıntılı Pandas/Spark ve bellek karşılaştırması Öğrenci 5'in bölümünde.
 
 ## Öğrenci 2 – Oturumlar ve dönüşüm
-*(doldurulacak)*
+
+PySpark ile kullanıcı oturumları oluşturuldu. Oturum ve kullanıcı bazında görüntüleme → sepet → satın alma
+dönüşümü, sepetten çıkarma ve sepet terki hesaplandı. Girdi olarak Öğrenci 1'in REES46 kozmetik mağazası
+verisinden hazırladığı kullanıcı bazlı 100k, 1m ve 5m Parquet örneklemleri kullanıldı.
+[Kaggle veri kümesi](https://www.kaggle.com/datasets/mkechinov/ecommerce-events-history-in-cosmetics-shop)
+
+```mermaid
+flowchart LR
+    E[Olay örneklemleri] --> W[Eksik oturum kimliklerini zaman penceresiyle tamamla]
+    W --> S[Oturum başına Spark gruplaması]
+    S --> P[Oturum Parquet tablosu]
+    P --> H[Oturum ve kullanıcı hunileri]
+    P --> A[Sepet terki ve oturum profili]
+    H --> R[CSV raporları]
+    A --> R
+    A --> G[Sepet terki grafiği]
+```
+
+### Çalıştırma
+
+Repo kökünde, projenin Python ortamı etkin durumdayken çalıştırın.
+
+```bash
+python -m src.ogrenci2.sessions
+python -m src.ogrenci2.conversion
+```
+
+İlk komut varsayılan olarak `data/processed/samples/` dizinini okur. Veri başka yerdeyse
+`python -m src.ogrenci2.sessions --samples-dir "../samples/samples"` gibi `100k`, `1m` ve `5m`
+klasörlerini içeren dizini belirtin. İki modülde de `--sizes 100k` ile yalnızca ilk örneklem seçilebilir.
+Dönüşüm komutu CSV ve grafikleri seçilen örneklemler için yeniden yazar.
+
+Oturum tabloları `data/processed/sessions/{100k,1m,5m}/sessions.parquet` altında oluşur. Öğrenci 4 ve 5
+bu tabloları doğrudan okuyabilir. Saat ve haftanın günü UTC'dir (`1 = Pazar`, `7 = Cumartesi`).
+
+### Hesaplama kuralları
+
+- Kaynaktaki dolu `user_session` kimlikleri korunur. Oturumlar `user_id` ve `user_session` birlikte kullanılarak
+  gruplanır. Eksik kimliği olan kullanıcının olayları zaman sırasına konur. `lag` ve kümülatif toplam ile ardışık
+  olaylar arasında **30 dakikayı aşan** boşlukta yeni blok açılır. Blokta tek bir bilinen kimlik varsa eksik
+  olaylar o oturuma katılır. Blokta kimlik yoksa veya birden fazla kimlik varsa eksik olaylara blok için üretilen
+  bir kimlik verilir. [Spark `lag` belgeleri](https://spark.apache.org/docs/4.0.1/api/python/reference/pyspark.sql/api/pyspark.sql.functions.lag.html)
+- Huni aşama varlığına dayanır. `huni_sayisi` sırasıyla `view`, `view ∩ cart` ve `view ∩ cart ∩ purchase`
+  gruplarını sayar. `bagimsiz_sayi` ise her aşamaya ulaşan bütün oturumları veya kullanıcıları içerir.
+  Kullanıcı hunisi aşamaları farklı oturumlardan birleştirebilir. Huni olay sırası ve ürün eşleşmesi gerektirmez.
+- Sepet terki, en az bir `cart` olayı bulunan oturumlar içinde hiç `purchase` olayı bulunmayanların payıdır.
+  Sepetten çıkarma hem `remove_from_cart / cart` olay oranıyla hem de çıkarma görülen sepetli oturumların
+  payıyla ölçülür. Satın almaya kadar geçen süre, satın alan oturumlarda ilk olay ile ilk satın alma arasındadır.
+  Medyanlar Spark `percentile_approx` ile hesaplanır.
+
+### Çıktılar
+
+- [Oturum özeti ve süreler](reports/ogrenci2/oturum_ozeti.csv)
+- [Oturum hunisi](reports/ogrenci2/huni_oturum.csv) ve [kullanıcı hunisi](reports/ogrenci2/huni_kullanici.csv)
+- [Olay bazlı oranlar](reports/ogrenci2/olay_oranlari.csv) ve [oturum başına olay sayısı dağılımı](reports/ogrenci2/oturum_olay_dagilimi.csv)
+- [Sepet terki profili](reports/ogrenci2/sepet_terki.csv) ve [grafiği](reports/ogrenci2/sepet_terki.png)
+
+### Sonuçlar
+
+| Örneklem | Olay | Oturum | Oturum hunisi view → purchase | Kullanıcı hunisi view → purchase | Sepet terki | Oturum tablosu süresi |
+|---|---:|---:|---:|---:|---:|---:|
+| 100k | 99.959 | 24.497 | %2,38 | %6,45 | %87,40 | 8,31 sn |
+| 1m | 999.932 | 235.059 | %2,46 | %6,48 | %87,37 | 5,63 sn |
+| 5m | 4.999.968 | 1.166.225 | %2,46 | %6,58 | %87,15 | 28,62 sn |
+
+- **Olay ve oturum oranları farklı davranışları ölçüyor.** 5m'de 100 görüntüleme olayına 57,94 sepete ekleme
+  olayı düşüyor. Görüntüleme yapılan 100 oturumun ise 18,16'sında sepete ekleme görüldü. Bir oturum çok sayıda
+  sepete ekleme üretebildiği için olay oranı, sepete ekleme yapan oturumların payından yüksek.
+- **Kullanıcı hunisinin dönüşümü daha yüksek.** Örneğin bir kullanıcı ürünü bir oturumda görüntüleyip sonraki
+  oturumlarında sepete ekleyebilir ve satın alabilir. Kullanıcı bazlı örnekleme tüm geçmişi koruduğu için huni
+  oranları üç farklı boyutta birbirine yakın kaldı.
+- **Sepeti terk eden ve satın alan oturumların profilleri farklı.** 5m'de sepeti terk eden 217.495 oturumda
+  oturum başına ortalama 11,6 olay var. Sepete ekleyip satın alan 32.080 oturumda bu değer 29,5. Çıkarma olayı
+  sepetli oturumların %39,45'inde görülüyor. İlk satın almaya kadar geçen süre ortalama 6 sa. 55 dk., medyan
+  13 dk. 15 sn. Kaynak kimliğiyle gruplanan bazı oturumlarda ilk ve son olay arasında günler var (en uzun
+  oturum yaklaşık 151 gün). Bu dağılımda tipik satın alma süresini medyan daha iyi yansıtıyor.
+- **Eksik kimlikli olaylar korundu.** 5m'deki 1.061 olayın 459'u mevcut oturumlara atandı. Kalan 602 olay
+  için 236 oturum kimliği üretildi.
+
+Süreler Windows 11, Ryzen 7 6800H, 16 GB RAM, Java 17 ve PySpark 4.3 ortamında, `local[*]` ve 4 GB Spark sürücü
+belleğiyle tek geçişte ölçüldü. Süre Parquet okumadan oturum Parquet'inin yazımı tamamlanana kadar geçen zamanı
+kapsıyor. Küçük bir Spark işiyle ısınma yapıldı. 100k'nın 1m'den yavaş çıkmasında ilk Parquet okuma, sorgu
+planlama ve JVM ısınma maliyetleri etkili olabilir. 5m'de daha büyük gruplama ve bölümleme işi ile daha fazla
+Parquet yazımı toplam süreyi artırıyor.
 
 ## Öğrenci 3 – Spark ile ürün/kategori/saat/segment analizi
 *(doldurulacak)*
