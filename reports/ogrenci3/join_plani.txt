@@ -1,0 +1,375 @@
+# Ürün metrikleri ⋈ ürün boyut tablosu (5m)
+
+== Physical Plan ==
+AdaptiveSparkPlan (53)
++- InMemoryTableScan (1)
+      +- InMemoryRelation (2)
+            +- AdaptiveSparkPlan (52)
+               +- == Final Plan ==
+                  * Project (34)
+                  +- * BroadcastHashJoin LeftOuter BuildRight (33)
+                     :- ShuffleQueryStage (19), Statistics(sizeInBytes=4.2 MiB, rowCount=4.99E+4)
+                     :  +- Exchange (18)
+                     :     +- * Project (17)
+                     :        +- Window (16)
+                     :           +- ShuffleQueryStage (15), Statistics(sizeInBytes=3.8 MiB, rowCount=4.99E+4)
+                     :              +- Exchange (14)
+                     :                 +- * Project (13)
+                     :                    +- * HashAggregate (12)
+                     :                       +- AQEShuffleRead (11)
+                     :                          +- ShuffleQueryStage (10), Statistics(sizeInBytes=4.8 MiB, rowCount=8.97E+4)
+                     :                             +- Exchange (9)
+                     :                                +- * HashAggregate (8)
+                     :                                   +- TableCacheQueryStage (7), Statistics(sizeInBytes=553.3 MiB, rowCount=5.00E+6)
+                     :                                      +- InMemoryTableScan (3)
+                     :                                            +- InMemoryRelation (4)
+                     :                                                  +- * ColumnarToRow (6)
+                     :                                                     +- Scan parquet  (5)
+                     +- BroadcastQueryStage (32), Statistics(sizeInBytes=6.0 MiB, rowCount=4.99E+4)
+                        +- BroadcastExchange (31)
+                           +- SortAggregate (30)
+                              +- * Sort (29)
+                                 +- AQEShuffleRead (28)
+                                    +- ShuffleQueryStage (27), Statistics(sizeInBytes=7.3 MiB, rowCount=8.97E+4)
+                                       +- Exchange (26)
+                                          +- SortAggregate (25)
+                                             +- * Sort (24)
+                                                +- * Filter (23)
+                                                   +- TableCacheQueryStage (22), Statistics(sizeInBytes=553.3 MiB, rowCount=5.00E+6)
+                                                      +- InMemoryTableScan (20)
+                                                            +- InMemoryRelation (21)
+                                                                  +- * ColumnarToRow (6)
+                                                                     +- Scan parquet  (5)
+               +- == Initial Plan ==
+                  Project (51)
+                  +- SortMergeJoin LeftOuter (50)
+                     :- Sort (43)
+                     :  +- Exchange (42)
+                     :     +- Project (41)
+                     :        +- Window (40)
+                     :           +- Exchange (39)
+                     :              +- Project (38)
+                     :                 +- HashAggregate (37)
+                     :                    +- Exchange (36)
+                     :                       +- HashAggregate (35)
+                     :                          +- InMemoryTableScan (3)
+                     :                                +- InMemoryRelation (4)
+                     :                                      +- * ColumnarToRow (6)
+                     :                                         +- Scan parquet  (5)
+                     +- SortAggregate (49)
+                        +- Sort (48)
+                           +- Exchange (47)
+                              +- SortAggregate (46)
+                                 +- Sort (45)
+                                    +- Filter (44)
+                                       +- InMemoryTableScan (20)
+                                             +- InMemoryRelation (21)
+                                                   +- * ColumnarToRow (6)
+                                                      +- Scan parquet  (5)
+
+
+(1) InMemoryTableScan
+Output [14]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+Arguments: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+
+(2) InMemoryRelation
+Arguments: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055, category_id#78980L, category_code#78982, brand#78984, last_price#78986], CachedRDDBuilder(org.apache.spark.sql.execution.columnar.DefaultCachedBatchSerializer@46c2c789,StorageLevel(disk, memory, deserialized, 1 replicas),AdaptiveSparkPlan isFinalPlan=true
++- == Final Plan ==
+   *(6) Project [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+   +- *(6) BroadcastHashJoin [product_id#56016L], [product_id#79078L], LeftOuter, BuildRight, false
+      :- ShuffleQueryStage 5
+      :  +- Exchange hashpartitioning(product_id#56016L, 16), ENSURE_REQUIREMENTS, [plan_id=43580]
+      :     +- *(4) Project [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, (gelir#79020 / _we0#79056) AS gelir_payi#79055]
+      :        +- Window [sum(gelir#79020) windowspecdefinition(specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS _we0#79056]
+      :           +- ShuffleQueryStage 4
+      :              +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=43535]
+      :                 +- *(3) Project [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, CASE WHEN (view#79012L > 0) THEN (cast(cart#79014L as double) / cast(view#79012L as double)) END AS sepet_orani#79027, CASE WHEN (cart#79014L > 0) THEN (cast(purchase#79018L as double) / cast(cart#79014L as double)) END AS sepetten_alim_orani#79035, CASE WHEN (view#79012L > 0) THEN (cast(purchase#79018L as double) / cast(view#79012L as double)) END AS donusum#79044]
+      :                    +- *(3) HashAggregate(keys=[product_id#56016L], functions=[sum(is_view#56012), sum(is_cart#56013), sum(is_remove#56014), sum(is_purchase#56015), sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)], output=[product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020])
+      :                       +- AQEShuffleRead coalesced
+      :                          +- ShuffleQueryStage 2
+      :                             +- Exchange hashpartitioning(product_id#56016L, 16), ENSURE_REQUIREMENTS, [plan_id=43447]
+      :                                +- *(1) HashAggregate(keys=[product_id#56016L], functions=[partial_sum(is_view#56012), partial_sum(is_cart#56013), partial_sum(is_remove#56014), partial_sum(is_purchase#56015), partial_sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)], output=[product_id#56016L, sum#79936L, sum#79937L, sum#79938L, sum#79939L, sum#79940])
+      :                                   +- TableCacheQueryStage 0
+      :                                      +- InMemoryTableScan [is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, price#56023]
+      :                                            +- InMemoryRelation [event_time#56005, event_hour#56007, event_dow#56008, is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, category_id#56017L, category_code#56018, brand#56022, price#56023, user_id#56024L, user_session#56025], StorageLevel(disk, memory, deserialized, 1 replicas)
+      :                                                  +- *(1) ColumnarToRow
+      :                                                     +- FileScan parquet [event_time#56005,event_hour#56007,event_dow#56008,is_view#56012,is_cart#56013,is_remove#56014,is_purchase#56015,product_id#56016L,category_id#56017L,category_code#56018,brand#56022,price#56023,user_id#56024L,user_session#56025] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/C:/Users/kilic/Desktop/Büyük Veri Analitiği/bva-ecommerce/data/p..., PartitionFilters: [], PushedFilters: [], ReadSchema: struct<event_time:timestamp,event_hour:int,event_dow:int,is_view:int,is_cart:int,is_remove:int,is...
+      +- BroadcastQueryStage 6
+         +- BroadcastExchange HashedRelationBroadcastMode(List(input[0, bigint, true]),false), [plan_id=43629]
+            +- SortAggregate(key=[product_id#79078L], functions=[max_by(category_id#79079L, event_time#79067), max_by(category_code#79080, event_time#79067), max_by(brand#79084, event_time#79067), max_by(price#79085, event_time#79067)], output=[product_id#79078L, category_id#78980L, category_code#78982, brand#78984, last_price#78986])
+               +- *(5) Sort [product_id#79078L ASC NULLS FIRST], false, 0
+                  +- AQEShuffleRead coalesced
+                     +- ShuffleQueryStage 3
+                        +- Exchange hashpartitioning(product_id#79078L, 16), ENSURE_REQUIREMENTS, [plan_id=43474]
+                           +- SortAggregate(key=[product_id#79078L], functions=[partial_max_by(category_id#79079L, event_time#79067), partial_max_by(category_code#79080, event_time#79067), partial_max_by(brand#79084, event_time#79067), partial_max_by(price#79085, event_time#79067)], output=[product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956])
+                              +- *(2) Sort [product_id#79078L ASC NULLS FIRST], false, 0
+                                 +- *(2) Filter isnotnull(product_id#79078L)
+                                    +- TableCacheQueryStage 1
+                                       +- InMemoryTableScan [event_time#79067, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085], [isnotnull(product_id#79078L)]
+                                             +- InMemoryRelation [event_time#79067, event_hour#79069, event_dow#79070, is_view#79074, is_cart#79075, is_remove#79076, is_purchase#79077, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085, user_id#79086L, user_session#79087], StorageLevel(disk, memory, deserialized, 1 replicas)
+                                                   +- *(1) ColumnarToRow
+                                                      +- FileScan parquet [event_time#56005,event_hour#56007,event_dow#56008,is_view#56012,is_cart#56013,is_remove#56014,is_purchase#56015,product_id#56016L,category_id#56017L,category_code#56018,brand#56022,price#56023,user_id#56024L,user_session#56025] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/C:/Users/kilic/Desktop/Büyük Veri Analitiği/bva-ecommerce/data/p..., PartitionFilters: [], PushedFilters: [], ReadSchema: struct<event_time:timestamp,event_hour:int,event_dow:int,is_view:int,is_cart:int,is_remove:int,is...
++- == Initial Plan ==
+   Project [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+   +- SortMergeJoin [product_id#56016L], [product_id#79078L], LeftOuter
+      :- Sort [product_id#56016L ASC NULLS FIRST], false, 0
+      :  +- Exchange hashpartitioning(product_id#56016L, 16), ENSURE_REQUIREMENTS, [plan_id=43321]
+      :     +- Project [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, (gelir#79020 / _we0#79056) AS gelir_payi#79055]
+      :        +- Window [sum(gelir#79020) windowspecdefinition(specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS _we0#79056]
+      :           +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=43310]
+      :              +- Project [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, CASE WHEN (view#79012L > 0) THEN (cast(cart#79014L as double) / cast(view#79012L as double)) END AS sepet_orani#79027, CASE WHEN (cart#79014L > 0) THEN (cast(purchase#79018L as double) / cast(cart#79014L as double)) END AS sepetten_alim_orani#79035, CASE WHEN (view#79012L > 0) THEN (cast(purchase#79018L as double) / cast(view#79012L as double)) END AS donusum#79044]
+      :                 +- HashAggregate(keys=[product_id#56016L], functions=[sum(is_view#56012), sum(is_cart#56013), sum(is_remove#56014), sum(is_purchase#56015), sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)], output=[product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020])
+      :                    +- Exchange hashpartitioning(product_id#56016L, 16), ENSURE_REQUIREMENTS, [plan_id=43306]
+      :                       +- HashAggregate(keys=[product_id#56016L], functions=[partial_sum(is_view#56012), partial_sum(is_cart#56013), partial_sum(is_remove#56014), partial_sum(is_purchase#56015), partial_sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)], output=[product_id#56016L, sum#79936L, sum#79937L, sum#79938L, sum#79939L, sum#79940])
+      :                          +- InMemoryTableScan [is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, price#56023]
+      :                                +- InMemoryRelation [event_time#56005, event_hour#56007, event_dow#56008, is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, category_id#56017L, category_code#56018, brand#56022, price#56023, user_id#56024L, user_session#56025], StorageLevel(disk, memory, deserialized, 1 replicas)
+      :                                      +- *(1) ColumnarToRow
+      :                                         +- FileScan parquet [event_time#56005,event_hour#56007,event_dow#56008,is_view#56012,is_cart#56013,is_remove#56014,is_purchase#56015,product_id#56016L,category_id#56017L,category_code#56018,brand#56022,price#56023,user_id#56024L,user_session#56025] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/C:/Users/kilic/Desktop/Büyük Veri Analitiği/bva-ecommerce/data/p..., PartitionFilters: [], PushedFilters: [], ReadSchema: struct<event_time:timestamp,event_hour:int,event_dow:int,is_view:int,is_cart:int,is_remove:int,is...
+      +- SortAggregate(key=[product_id#79078L], functions=[max_by(category_id#79079L, event_time#79067), max_by(category_code#79080, event_time#79067), max_by(brand#79084, event_time#79067), max_by(price#79085, event_time#79067)], output=[product_id#79078L, category_id#78980L, category_code#78982, brand#78984, last_price#78986])
+         +- Sort [product_id#79078L ASC NULLS FIRST], false, 0
+            +- Exchange hashpartitioning(product_id#79078L, 16), ENSURE_REQUIREMENTS, [plan_id=43316]
+               +- SortAggregate(key=[product_id#79078L], functions=[partial_max_by(category_id#79079L, event_time#79067), partial_max_by(category_code#79080, event_time#79067), partial_max_by(brand#79084, event_time#79067), partial_max_by(price#79085, event_time#79067)], output=[product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956])
+                  +- Sort [product_id#79078L ASC NULLS FIRST], false, 0
+                     +- Filter isnotnull(product_id#79078L)
+                        +- InMemoryTableScan [event_time#79067, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085], [isnotnull(product_id#79078L)]
+                              +- InMemoryRelation [event_time#79067, event_hour#79069, event_dow#79070, is_view#79074, is_cart#79075, is_remove#79076, is_purchase#79077, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085, user_id#79086L, user_session#79087], StorageLevel(disk, memory, deserialized, 1 replicas)
+                                    +- *(1) ColumnarToRow
+                                       +- FileScan parquet [event_time#56005,event_hour#56007,event_dow#56008,is_view#56012,is_cart#56013,is_remove#56014,is_purchase#56015,product_id#56016L,category_id#56017L,category_code#56018,brand#56022,price#56023,user_id#56024L,user_session#56025] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/C:/Users/kilic/Desktop/Büyük Veri Analitiği/bva-ecommerce/data/p..., PartitionFilters: [], PushedFilters: [], ReadSchema: struct<event_time:timestamp,event_hour:int,event_dow:int,is_view:int,is_cart:int,is_remove:int,is...
+,None)
+
+(3) InMemoryTableScan
+Output [6]: [is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, price#56023]
+Arguments: [is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, price#56023]
+
+(4) InMemoryRelation
+Arguments: [event_time#56005, event_hour#56007, event_dow#56008, is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, category_id#56017L, category_code#56018, brand#56022, price#56023, user_id#56024L, user_session#56025], CachedRDDBuilder(org.apache.spark.sql.execution.columnar.DefaultCachedBatchSerializer@46c2c789,StorageLevel(disk, memory, deserialized, 1 replicas),*(1) ColumnarToRow
++- FileScan parquet [event_time#56005,event_hour#56007,event_dow#56008,is_view#56012,is_cart#56013,is_remove#56014,is_purchase#56015,product_id#56016L,category_id#56017L,category_code#56018,brand#56022,price#56023,user_id#56024L,user_session#56025] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/C:/Users/kilic/Desktop/Büyük Veri Analitiği/bva-ecommerce/data/p..., PartitionFilters: [], PushedFilters: [], ReadSchema: struct<event_time:timestamp,event_hour:int,event_dow:int,is_view:int,is_cart:int,is_remove:int,is...
+,None)
+
+(5) Scan parquet 
+Output [14]: [event_time#56005, event_hour#56007, event_dow#56008, is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, category_id#56017L, category_code#56018, brand#56022, price#56023, user_id#56024L, user_session#56025]
+Batched: true
+Location: InMemoryFileIndex [file:/C:/Users/kilic/Desktop/Büyük Veri Analitiği/bva-ecommerce/data/processed/samples/5m/events.parquet]
+ReadSchema: struct<event_time:timestamp,event_hour:int,event_dow:int,is_view:int,is_cart:int,is_remove:int,is_purchase:int,product_id:bigint,category_id:bigint,category_code:string,brand:string,price:double,user_id:bigint,user_session:string>
+
+(6) ColumnarToRow [codegen id : 1]
+Input [14]: [event_time#56005, event_hour#56007, event_dow#56008, is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, category_id#56017L, category_code#56018, brand#56022, price#56023, user_id#56024L, user_session#56025]
+
+(7) TableCacheQueryStage
+Output [6]: [is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, price#56023]
+Arguments: 0
+
+(8) HashAggregate [codegen id : 1]
+Input [6]: [is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, price#56023]
+Keys [1]: [product_id#56016L]
+Functions [5]: [partial_sum(is_view#56012), partial_sum(is_cart#56013), partial_sum(is_remove#56014), partial_sum(is_purchase#56015), partial_sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)]
+Aggregate Attributes [5]: [sum#79931L, sum#79932L, sum#79933L, sum#79934L, sum#79935]
+Results [6]: [product_id#56016L, sum#79936L, sum#79937L, sum#79938L, sum#79939L, sum#79940]
+
+(9) Exchange
+Input [6]: [product_id#56016L, sum#79936L, sum#79937L, sum#79938L, sum#79939L, sum#79940]
+Arguments: hashpartitioning(product_id#56016L, 16), ENSURE_REQUIREMENTS, [plan_id=43447]
+
+(10) ShuffleQueryStage
+Output [6]: [product_id#56016L, sum#79936L, sum#79937L, sum#79938L, sum#79939L, sum#79940]
+Arguments: 2
+
+(11) AQEShuffleRead
+Input [6]: [product_id#56016L, sum#79936L, sum#79937L, sum#79938L, sum#79939L, sum#79940]
+Arguments: coalesced
+
+(12) HashAggregate [codegen id : 3]
+Input [6]: [product_id#56016L, sum#79936L, sum#79937L, sum#79938L, sum#79939L, sum#79940]
+Keys [1]: [product_id#56016L]
+Functions [5]: [sum(is_view#56012), sum(is_cart#56013), sum(is_remove#56014), sum(is_purchase#56015), sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)]
+Aggregate Attributes [5]: [sum(is_view#56012)#79011L, sum(is_cart#56013)#79013L, sum(is_remove#56014)#79015L, sum(is_purchase#56015)#79017L, sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)#79019]
+Results [6]: [product_id#56016L, sum(is_view#56012)#79011L AS view#79012L, sum(is_cart#56013)#79013L AS cart#79014L, sum(is_remove#56014)#79015L AS remove_from_cart#79016L, sum(is_purchase#56015)#79017L AS purchase#79018L, round(sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)#79019, 2) AS gelir#79020]
+
+(13) Project [codegen id : 3]
+Output [9]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, CASE WHEN (view#79012L > 0) THEN (cast(cart#79014L as double) / cast(view#79012L as double)) END AS sepet_orani#79027, CASE WHEN (cart#79014L > 0) THEN (cast(purchase#79018L as double) / cast(cart#79014L as double)) END AS sepetten_alim_orani#79035, CASE WHEN (view#79012L > 0) THEN (cast(purchase#79018L as double) / cast(view#79012L as double)) END AS donusum#79044]
+Input [6]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020]
+
+(14) Exchange
+Input [9]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044]
+Arguments: SinglePartition, ENSURE_REQUIREMENTS, [plan_id=43535]
+
+(15) ShuffleQueryStage
+Output [9]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044]
+Arguments: 4
+
+(16) Window
+Input [9]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044]
+Arguments: [sum(gelir#79020) windowspecdefinition(specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS _we0#79056]
+
+(17) Project [codegen id : 4]
+Output [10]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, (gelir#79020 / _we0#79056) AS gelir_payi#79055]
+Input [10]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, _we0#79056]
+
+(18) Exchange
+Input [10]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055]
+Arguments: hashpartitioning(product_id#56016L, 16), ENSURE_REQUIREMENTS, [plan_id=43580]
+
+(19) ShuffleQueryStage
+Output [10]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055]
+Arguments: 5
+
+(20) InMemoryTableScan
+Output [6]: [event_time#79067, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085]
+Arguments: [event_time#79067, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085], [isnotnull(product_id#79078L)]
+
+(21) InMemoryRelation
+Arguments: [event_time#79067, event_hour#79069, event_dow#79070, is_view#79074, is_cart#79075, is_remove#79076, is_purchase#79077, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085, user_id#79086L, user_session#79087], CachedRDDBuilder(org.apache.spark.sql.execution.columnar.DefaultCachedBatchSerializer@46c2c789,StorageLevel(disk, memory, deserialized, 1 replicas),*(1) ColumnarToRow
++- FileScan parquet [event_time#56005,event_hour#56007,event_dow#56008,is_view#56012,is_cart#56013,is_remove#56014,is_purchase#56015,product_id#56016L,category_id#56017L,category_code#56018,brand#56022,price#56023,user_id#56024L,user_session#56025] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/C:/Users/kilic/Desktop/Büyük Veri Analitiği/bva-ecommerce/data/p..., PartitionFilters: [], PushedFilters: [], ReadSchema: struct<event_time:timestamp,event_hour:int,event_dow:int,is_view:int,is_cart:int,is_remove:int,is...
+,None)
+
+(22) TableCacheQueryStage
+Output [6]: [event_time#79067, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085]
+Arguments: 1
+
+(23) Filter [codegen id : 2]
+Input [6]: [event_time#79067, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085]
+Condition : isnotnull(product_id#79078L)
+
+(24) Sort [codegen id : 2]
+Input [6]: [event_time#79067, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085]
+Arguments: [product_id#79078L ASC NULLS FIRST], false, 0
+
+(25) SortAggregate
+Input [6]: [event_time#79067, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085]
+Keys [1]: [product_id#79078L]
+Functions [4]: [partial_max_by(category_id#79079L, event_time#79067), partial_max_by(category_code#79080, event_time#79067), partial_max_by(brand#79084, event_time#79067), partial_max_by(price#79085, event_time#79067)]
+Aggregate Attributes [8]: [valueWithExtremumOrdering#79941L, extremumOrdering#79942, valueWithExtremumOrdering#79943, extremumOrdering#79944, valueWithExtremumOrdering#79945, extremumOrdering#79946, valueWithExtremumOrdering#79947, extremumOrdering#79948]
+Results [9]: [product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956]
+
+(26) Exchange
+Input [9]: [product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956]
+Arguments: hashpartitioning(product_id#79078L, 16), ENSURE_REQUIREMENTS, [plan_id=43474]
+
+(27) ShuffleQueryStage
+Output [9]: [product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956]
+Arguments: 3
+
+(28) AQEShuffleRead
+Input [9]: [product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956]
+Arguments: coalesced
+
+(29) Sort [codegen id : 5]
+Input [9]: [product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956]
+Arguments: [product_id#79078L ASC NULLS FIRST], false, 0
+
+(30) SortAggregate
+Input [9]: [product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956]
+Keys [1]: [product_id#79078L]
+Functions [4]: [max_by(category_id#79079L, event_time#79067), max_by(category_code#79080, event_time#79067), max_by(brand#79084, event_time#79067), max_by(price#79085, event_time#79067)]
+Aggregate Attributes [4]: [max_by(category_id#79079L, event_time#79067)#78979L, max_by(category_code#79080, event_time#79067)#78981, max_by(brand#79084, event_time#79067)#78983, max_by(price#79085, event_time#79067)#78985]
+Results [5]: [product_id#79078L, max_by(category_id#79079L, event_time#79067)#78979L AS category_id#78980L, max_by(category_code#79080, event_time#79067)#78981 AS category_code#78982, max_by(brand#79084, event_time#79067)#78983 AS brand#78984, max_by(price#79085, event_time#79067)#78985 AS last_price#78986]
+
+(31) BroadcastExchange
+Input [5]: [product_id#79078L, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+Arguments: HashedRelationBroadcastMode(List(input[0, bigint, true]),false), [plan_id=43629]
+
+(32) BroadcastQueryStage
+Output [5]: [product_id#79078L, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+Arguments: 6
+
+(33) BroadcastHashJoin [codegen id : 6]
+Left keys [1]: [product_id#56016L]
+Right keys [1]: [product_id#79078L]
+Join type: LeftOuter
+Join condition: None
+
+(34) Project [codegen id : 6]
+Output [14]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+Input [15]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055, product_id#79078L, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+
+(35) HashAggregate
+Input [6]: [is_view#56012, is_cart#56013, is_remove#56014, is_purchase#56015, product_id#56016L, price#56023]
+Keys [1]: [product_id#56016L]
+Functions [5]: [partial_sum(is_view#56012), partial_sum(is_cart#56013), partial_sum(is_remove#56014), partial_sum(is_purchase#56015), partial_sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)]
+Aggregate Attributes [5]: [sum#79931L, sum#79932L, sum#79933L, sum#79934L, sum#79935]
+Results [6]: [product_id#56016L, sum#79936L, sum#79937L, sum#79938L, sum#79939L, sum#79940]
+
+(36) Exchange
+Input [6]: [product_id#56016L, sum#79936L, sum#79937L, sum#79938L, sum#79939L, sum#79940]
+Arguments: hashpartitioning(product_id#56016L, 16), ENSURE_REQUIREMENTS, [plan_id=43306]
+
+(37) HashAggregate
+Input [6]: [product_id#56016L, sum#79936L, sum#79937L, sum#79938L, sum#79939L, sum#79940]
+Keys [1]: [product_id#56016L]
+Functions [5]: [sum(is_view#56012), sum(is_cart#56013), sum(is_remove#56014), sum(is_purchase#56015), sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)]
+Aggregate Attributes [5]: [sum(is_view#56012)#79011L, sum(is_cart#56013)#79013L, sum(is_remove#56014)#79015L, sum(is_purchase#56015)#79017L, sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)#79019]
+Results [6]: [product_id#56016L, sum(is_view#56012)#79011L AS view#79012L, sum(is_cart#56013)#79013L AS cart#79014L, sum(is_remove#56014)#79015L AS remove_from_cart#79016L, sum(is_purchase#56015)#79017L AS purchase#79018L, round(sum(CASE WHEN (is_purchase#56015 = 1) THEN price#56023 ELSE 0.0 END)#79019, 2) AS gelir#79020]
+
+(38) Project
+Output [9]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, CASE WHEN (view#79012L > 0) THEN (cast(cart#79014L as double) / cast(view#79012L as double)) END AS sepet_orani#79027, CASE WHEN (cart#79014L > 0) THEN (cast(purchase#79018L as double) / cast(cart#79014L as double)) END AS sepetten_alim_orani#79035, CASE WHEN (view#79012L > 0) THEN (cast(purchase#79018L as double) / cast(view#79012L as double)) END AS donusum#79044]
+Input [6]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020]
+
+(39) Exchange
+Input [9]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044]
+Arguments: SinglePartition, ENSURE_REQUIREMENTS, [plan_id=43310]
+
+(40) Window
+Input [9]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044]
+Arguments: [sum(gelir#79020) windowspecdefinition(specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS _we0#79056]
+
+(41) Project
+Output [10]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, (gelir#79020 / _we0#79056) AS gelir_payi#79055]
+Input [10]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, _we0#79056]
+
+(42) Exchange
+Input [10]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055]
+Arguments: hashpartitioning(product_id#56016L, 16), ENSURE_REQUIREMENTS, [plan_id=43321]
+
+(43) Sort
+Input [10]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055]
+Arguments: [product_id#56016L ASC NULLS FIRST], false, 0
+
+(44) Filter
+Input [6]: [event_time#79067, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085]
+Condition : isnotnull(product_id#79078L)
+
+(45) Sort
+Input [6]: [event_time#79067, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085]
+Arguments: [product_id#79078L ASC NULLS FIRST], false, 0
+
+(46) SortAggregate
+Input [6]: [event_time#79067, product_id#79078L, category_id#79079L, category_code#79080, brand#79084, price#79085]
+Keys [1]: [product_id#79078L]
+Functions [4]: [partial_max_by(category_id#79079L, event_time#79067), partial_max_by(category_code#79080, event_time#79067), partial_max_by(brand#79084, event_time#79067), partial_max_by(price#79085, event_time#79067)]
+Aggregate Attributes [8]: [valueWithExtremumOrdering#79941L, extremumOrdering#79942, valueWithExtremumOrdering#79943, extremumOrdering#79944, valueWithExtremumOrdering#79945, extremumOrdering#79946, valueWithExtremumOrdering#79947, extremumOrdering#79948]
+Results [9]: [product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956]
+
+(47) Exchange
+Input [9]: [product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956]
+Arguments: hashpartitioning(product_id#79078L, 16), ENSURE_REQUIREMENTS, [plan_id=43316]
+
+(48) Sort
+Input [9]: [product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956]
+Arguments: [product_id#79078L ASC NULLS FIRST], false, 0
+
+(49) SortAggregate
+Input [9]: [product_id#79078L, valueWithExtremumOrdering#79949L, extremumOrdering#79950, valueWithExtremumOrdering#79951, extremumOrdering#79952, valueWithExtremumOrdering#79953, extremumOrdering#79954, valueWithExtremumOrdering#79955, extremumOrdering#79956]
+Keys [1]: [product_id#79078L]
+Functions [4]: [max_by(category_id#79079L, event_time#79067), max_by(category_code#79080, event_time#79067), max_by(brand#79084, event_time#79067), max_by(price#79085, event_time#79067)]
+Aggregate Attributes [4]: [max_by(category_id#79079L, event_time#79067)#78979L, max_by(category_code#79080, event_time#79067)#78981, max_by(brand#79084, event_time#79067)#78983, max_by(price#79085, event_time#79067)#78985]
+Results [5]: [product_id#79078L, max_by(category_id#79079L, event_time#79067)#78979L AS category_id#78980L, max_by(category_code#79080, event_time#79067)#78981 AS category_code#78982, max_by(brand#79084, event_time#79067)#78983 AS brand#78984, max_by(price#79085, event_time#79067)#78985 AS last_price#78986]
+
+(50) SortMergeJoin
+Left keys [1]: [product_id#56016L]
+Right keys [1]: [product_id#79078L]
+Join type: LeftOuter
+Join condition: None
+
+(51) Project
+Output [14]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+Input [15]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055, product_id#79078L, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+
+(52) AdaptiveSparkPlan
+Output [14]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+Arguments: isFinalPlan=true
+
+(53) AdaptiveSparkPlan
+Output [14]: [product_id#56016L, view#79012L, cart#79014L, remove_from_cart#79016L, purchase#79018L, gelir#79020, sepet_orani#79027, sepetten_alim_orani#79035, donusum#79044, gelir_payi#79055, category_id#78980L, category_code#78982, brand#78984, last_price#78986]
+Arguments: isFinalPlan=false
+
+
