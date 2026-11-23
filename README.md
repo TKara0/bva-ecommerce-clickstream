@@ -4,6 +4,10 @@
 
 **Araştırma sorusu:** Büyük clickstream verisinden satışa dönüşümü artıracak hangi bilgiler çıkarılabilir?
 
+> **Gruba yeni katılıyorsan önce [`docs/BASLANGIC.md`](docs/BASLANGIC.md)'yi oku.**
+> Kendi görevin ve agent promptun: [`docs/gorevler/`](docs/gorevler/) ·
+> Sınav soruları: [`docs/sinav_sorulari.md`](docs/sinav_sorulari.md)
+
 ## Veri seti
 
 | | |
