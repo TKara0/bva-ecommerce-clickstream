@@ -1,0 +1,23 @@
+kolon,tip,bos_%,farkli_deger_yaklasik,min,max,ornek,aciklama
+event_time,timestamp,0.0,9468579,2019-10-01 00:00:00,2020-02-29 23:59:59,2020-02-01 00:00:23,Olayın zamanı (UTC)
+event_date,date,0.0,151,2019-10-01,2020-02-29,2020-02-01,Olay tarihi (türetilmiş)
+event_hour,int,0.0,25,0,23,0,"Olay saati 0-23, UTC (türetilmiş)"
+event_dow,int,0.0,7,1,7,7,"Haftanın günü, 1=Pazar ... 7=Cumartesi (türetilmiş)"
+event_type,string,0.0,4,cart,view,cart,Olay tipi: view / cart / remove_from_cart / purchase
+funnel_step,int,0.0,3,1,3,2,"Huni adımı: 1=görüntüleme, 2=sepet, 3=satın alma (olay modeli)"
+funnel_stage,string,0.0,3,goruntuleme,sepet,sepet,Huni aşamasının adı (olay modeli)
+is_view,int,0.0,2,0,1,0,Olay görüntüleme mi? 0/1
+is_cart,int,0.0,2,0,1,1,Olay sepete ekleme mi? 0/1
+is_remove,int,0.0,2,0,1,0,Olay sepetten çıkarma mı? 0/1
+is_purchase,int,0.0,2,0,1,0,Olay satın alma mı? 0/1
+product_id,bigint,0.0,54218,3752,5932595,5813498,Ürün kimliği
+category_id,bigint,0.0,500,1487580004807082827,2242903426784559183,1487580005553668971,Kategori kimliği
+category_code,string,98.25,12,accessories.bag,stationery.cartrige,appliances.environment.vacuum,Kategori ağacı kodu (ör. appliances.kitchen.blender); çoğu satırda boş
+category_l1,string,98.25,6,accessories,stationery,appliances,Kategori 1. seviye (category_code'dan türetilmiş)
+category_l2,string,98.25,9,bag,personal,environment,Kategori 2. seviye (türetilmiş)
+category_l3,string,98.93,7,air_conditioner,vacuum,vacuum,Kategori 3. seviye (türetilmiş)
+brand,string,42.2,293,airnails,zinger,masura,Marka adı (küçük harfe çevrilmiş); boş olabilir
+price,double,0.0,2747,0.0,327.78,11.03,Ürün fiyatı
+user_id,bigint,0.0,1568431,465496,622090237,583267679,Kalıcı kullanıcı kimliği
+user_session,string,0.02,4830810,0000061d-f3e9-484b-8c73-e54f355032a3,fffffc08-81e3-4050-9cd6-a5301f79f6f1,2806ff10-08bc-4811-9ab7-af074fe22a88,Geçici oturum kimliği; kullanıcı uzun aradan sonra dönünce değişir
+event_month,string,0.0,5,2019-10,2020-02,2020-02,"Olay ayı yyyy-MM (türetilmiş, partition kolonu)"

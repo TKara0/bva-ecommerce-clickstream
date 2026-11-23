@@ -1,0 +1,7 @@
+orneklem,format,disk_mb,count_sn,tek_kolon_ort_fiyat_sn,groupby_olay_tipi_sn
+100k,CSV,16.55,0.281,0.364,0.359
+100k,Parquet,3.01,0.22,0.255,0.278
+1m,CSV,165.42,0.271,0.405,0.402
+1m,Parquet,40.32,0.233,0.25,0.277
+5m,CSV,827.22,0.462,1.028,1.303
+5m,Parquet,206.53,0.319,0.265,0.565
