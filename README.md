@@ -262,7 +262,161 @@ planlama ve JVM ısınma maliyetleri etkili olabilir. 5m'de daha büyük gruplam
 Parquet yazımı toplam süreyi artırıyor.
 
 ## Öğrenci 3 – Spark ile ürün/kategori/saat/segment analizi
-*(doldurulacak)*
+
+PySpark ile olaylar dört boyutta incelendi: ürün, kategori/marka, haftanın günü × saat ve müşteri segmenti (RFM).
+Her boyutta aynı metrikler (view, cart, remove_from_cart, purchase, gelir ve dönüşüm oranları) tek bir `groupBy`
+geçişinde hesaplandı. Girdi olarak Öğrenci 1'in 100k, 1m ve 5m Parquet örneklemleri kullanıldı. Amaç, araştırma
+sorusuna "dönüşümü hangi ürün, kategori, saat ve müşteri grubu taşıyor, hangisi kaybettiriyor?" sorusuyla katkı
+vermek.
+
+```mermaid
+flowchart LR
+    E[Olay örneklemi<br/>Parquet] --> C[Gerekli kolonlar<br/>okunur ve cache]
+    C --> U[Ürün metrikleri] --> J[JOIN<br/>ürün boyut tablosu] --> T[Window rank<br/>top-10 listeleri]
+    J --> FU[Fırsat ürünleri]
+    C --> K[Kategori ve marka<br/>metrikleri]
+    C --> S[Gün × saat<br/>metrikleri]
+    C --> R[Kullanıcı başına R, F, M] --> P[Window percent_rank<br/>çeyrek skorları] --> SG[Segmentler]
+    SG --> RP[(rfm.parquet<br/>Öğrenci 4)]
+    T & FU & K & S & SG --> O[CSV ve grafikler]
+```
+
+### Çalıştırma
+
+```bash
+python -m src.ogrenci3.analiz                               # sadece 100k
+python -m src.ogrenci3.analiz --sizes 100k 1m 5m --repeat 3  # raporlanan sonuçlar
+```
+
+Çıktılar `reports/ogrenci3/` altına yazılır. Aynı CSV'de üç boyut birlikte tutulur (`boyut` kolonu), yalnızca
+çalıştırılan boyutların satırları yenilenir. RFM tablosu `data/processed/rfm/{100k,1m,5m}/rfm.parquet` altında oluşur
+(`user_id, recency, frequency, monetary, segment, R, F, M`).
+
+### Hesaplama kuralları
+
+- **Dönüşüm** `purchase / view` (olay bazlı), **kullanıcı dönüşümü** satın alan tekil kullanıcı / görüntüleyen tekil
+  kullanıcıdır. **Gelir** satın alma olaylarındaki `price` toplamıdır (veride miktar kolonu yok).
+- **Kategori** `category_code` %98 boş olduğu için `category_id` ile gruplanır. Kod etiketi, dolu satırlardan ayrı
+  küçük bir tabloda hesaplanıp join ile eklenir. **Marka** boş olanlar `(bos)` grubunda tutulur.
+- **Ürün boyut tablosu** (`dim_product`) Drive'da olmadığı için Öğrenci 1'in tanımıyla örneklemden üretildi: ürünün en
+  son görülen kategori, marka ve fiyatı (`max_by`). Ürün metrikleri bu tabloyla birleştirilir. Spark bu join için
+  `BroadcastHashJoin` seçti ([join_plani.txt](reports/ogrenci3/join_plani.txt)). Küçük tablo her göreve
+  kopyalandığı için büyük tablo shuffle edilmedi.
+- **Top-10 listeleri** (en çok görüntülenen, sepete eklenen, satın alınan, gelir) `rank` window fonksiyonuyla
+  çıkarıldı. Dört liste alt alta konup `liste` kolonuyla bölümlendiği için tek window işi yeterli oldu.
+- **Fırsat ürünleri** görüntülenmede üst %10'luk dilimdeki ürünler içinde dönüşümü medyanın altında kalanlardır.
+  `potansiyel_ek_satis` dönüşüm medyana çıksaydı kazanılacak ek satıştır. Az görüntülenen ürünler dışarıda bırakılır,
+  çünkü oranları gürültülüdür (3 görüntüleme, 1 satış = %33).
+- **Saat ve gün** UTC'dir. Isı haritasında 100'den az görüntülemeli hücrelerin dönüşümü gösterilmez.
+- **RFM.** Recency, 2020-02-29'dan son satın almaya kadar geçen gündür. Frequency, satın alma yapılan oturum (sipariş)
+  sayısıdır. Ürün adedi kullanılmadı, çünkü tek siparişte 5 ürün alan biri "5 kez almış" sayılırdı. Monetary,
+  toplam harcamadır. Skorlar 1–4 arası çeyreklerdir ve `percent_rank` window fonksiyonuyla hesaplanır.
+  [`ntile`](https://spark.apache.org/docs/3.5.1/api/python/reference/pyspark.sql/api/pyspark.sql.functions.ntile.html)
+  kullanılmadı, çünkü alıcıların çoğu 1 sipariş verdiği için aynı değerdeki müşterileri keyfi olarak farklı
+  çeyreklere bölerdi. [`percent_rank`](https://spark.apache.org/docs/3.5.1/api/python/reference/pyspark.sql/api/pyspark.sql.functions.percent_rank.html)
+  ise eşit değerlere aynı sırayı verir. Segment kuralları sırasıyla şöyle:
+
+  | Segment | Kural |
+  |---|---|
+  | Şampiyon | R ≥ 3, F ≥ 3, M ≥ 3 |
+  | Sadık | F ≥ 3 |
+  | Risk altında | R ≤ 2, M ≥ 3 |
+  | Yeni / umut veren | R ≥ 3 |
+  | Uykuda | diğer alıcılar |
+  | Hiç almamış – sepete eklemiş / sadece gezmiş | satın alması olmayanlar |
+
+- **Süre** her adımın 3 tekrarının medyanıdır. Her tekrarda sorgu sıfırdan kurulur. Aynı DataFrame tekrar
+  çalıştırılırsa Spark önceki shuffle çıktılarını yeniden kullanır ve süre yapay olarak düşer. İlk denemede ürün
+  adımı 5m'de 12,9 sn iken tekrarlarda 0,12 sn ölçülmüştü. Bu yüzden ölçüm bu kurala göre düzeltildi.
+
+### Çıktılar
+
+- [Top-10 ürünler](reports/ogrenci3/top_urunler.csv) ve [fırsat ürünleri](reports/ogrenci3/firsat_urunleri.csv)
+- [Kategori dönüşümü](reports/ogrenci3/kategori_donusum.csv) ve [grafiği](reports/ogrenci3/kategori_donusum.png),
+  [marka dönüşümü](reports/ogrenci3/marka_donusum.csv)
+- [Gün × saat tablosu](reports/ogrenci3/saat_gun.csv) ve [ısı haritası](reports/ogrenci3/saat_gun_isi_haritasi.png)
+- [RFM segmentleri](reports/ogrenci3/rfm_segmentler.csv) ve [grafiği](reports/ogrenci3/segment_dagilimi.png)
+- [Süreler](reports/ogrenci3/sureler.csv) ve [grafiği](reports/ogrenci3/sureler.png),
+  [join fiziksel planı](reports/ogrenci3/join_plani.txt)
+
+### Sonuçlar
+
+Toplam olay sayıları üç boyutta da Öğrenci 1'in örneklem özetiyle aynıdır (5m: 2.478.811 view, 324.081 purchase).
+
+| Örneklem | Alıcı kullanıcı payı | Şampiyon: kullanıcı / harcama payı | Risk altında: kullanıcı / harcama payı | Sepete ekleyip hiç almayan |
+|---|---:|---:|---:|---:|
+| 100k | %6,6 | %0,8 / %30,2 | %1,3 / %24,8 | %18,1 |
+| 1m | %6,7 | %0,9 / %35,3 | %1,2 / %21,4 | %17,8 |
+| 5m | %6,8 | %0,9 / %37,0 | %1,2 / %20,5 | %17,7 |
+
+- **Harcama birkaç segmentte toplanıyor.** 5m'de Şampiyon, Sadık ve Risk altında segmentleri kullanıcıların
+  %2,6'sı, ama harcamanın %68,6'sını yapıyor. Şampiyonların ortalama sipariş sayısı 3,4, ortalama harcaması 159,3.
+- **Kaybedilmek üzere olan değerli müşteriler var.** Risk altındaki 4.902 müşteri harcamanın %20,5'ini yapmış.
+  Ortalama 110 gündür alışveriş yapmıyorlar.
+- **En büyük kitle niyet gösterip almayanlar.** Kullanıcıların %17,7'si (5m'de 72.732 kişi) sepete ekleyip hiç
+  satın almamış. Bu kişiler ortalama 9,1 görüntüleme yapmış, sadece gezenler ise 2,4.
+- **Trafik zirvesi ile satın alma zirvesi farklı saatlerde.** Görüntüleme en çok 19:00 UTC'de (166.637), ama bu
+  saatin dönüşümü %11,5 ile günün en düşüğü. Satın alma en çok 11:00 UTC'de (22.085), dönüşüm %14,8. Günlere
+  göre en yüksek dönüşüm Cuma'da (%14,1), en düşük hafta sonunda (%12,2).
+- **Çok görüntülenen kategorilerin dönüşümü çok farklı.** 20 binden fazla görüntülenen 23 kategoride dönüşüm %1,4 ile
+  %39,7 arasında değişiyor. `…6300255120` kategorisi 70.224 görüntüleme ile %1,4 dönüşümde kalıyor, ama yüksek
+  fiyatlı ürünleri yüzünden gelirin %5,7'sini getiriyor. 5m'deki ilk 8 fırsat ürününün 4'ü bu kategoride. Gelirin
+  %80'ini 517 kategoriden 87'si oluşturuyor.
+- **Fırsat ürünleri.** 5m'de en çok görüntülenen ürün (5809910, 23.396 görüntüleme) %8,0 dönüşümde. Popüler ürünlerin
+  medyanı %11,2. Bu ürün medyana çıksaydı yaklaşık 761 ek satış olurdu. İlk 20 fırsat ürününün toplam potansiyeli
+  yaklaşık 7.718 ek satış.
+- **Marka.** Markası boş ürünler gelirin %40,6'sını oluşturuyor. Bu yüzden marka analizinde boş grup atılmadı.
+  Popüler markalarda dönüşüm runail'de %17,8, jessnail'de %5,4.
+
+**Top-10 listeleri neden boyuta göre değişiyor?** 100k ile 5m arasında ortak ürün sayısı en çok görüntülenenlerde
+10/10, sepete eklenenlerde 9/10, satın alınanlarda 8/10, gelirde 6/10. Görüntüleme sayıları büyük olduğu için
+sıralama küçük örneklemde de oturuyor. Gelir ise birkaç pahalı satın almaya bağlı ve küçük örneklemde tesadüfe açık.
+Örneğin 5m'de gelirde 1. olan ürün (fiyat 194,4) sadece 102 satışla bu sıraya geliyor. 1m ile 5m'nin listeleri
+neredeyse aynı (gelirde 8/10). Fırsat ürünü eşiği de boyutla birlikte 6'dan 24'e ve 101 görüntülemeye çıkıyor.
+100k'daki fırsat listesi gürültülü, 5m'deki güvenilir. Segment payları ise üç boyutta da birbirine yakın. Bunun
+sebebi örneklemin kullanıcı bazlı alınması ve kullanıcının tüm geçmişinin korunması.
+
+### Performans
+
+| Adım (medyan sn) | 100k | 1m | 5m | 5m / 100k |
+|---|---:|---:|---:|---:|
+| Okuma + cache | 0,64 | 2,14 | 9,52 | 15× |
+| Ürün (boyut tablosu + join + top-10) | 2,03 | 2,53 | 13,64 | 6,7× |
+| Kategori | 0,80 | 1,28 | 4,45 | 5,6× |
+| Marka | 0,41 | 1,02 | 6,65 | 16× |
+| Gün × saat | 0,38 | 0,25 | 0,50 | 1,3× |
+| RFM | 0,66 | 0,97 | 5,93 | 9,0× |
+
+- **Veri 50 kat büyüdü, süre 1,3–16 kat arttı.** Küçük veride görev planlama ve JVM gibi sabit maliyetler baskın.
+  Bu yüzden 100k'da süreler veriden bağımsız gibi görünüyor. Spark'ın paralel işlemesinin faydası veri büyüdükçe
+  ortaya çıkıyor.
+- **En pahalı adım ürün analizi.** Grup sayısı en yüksek olan boyut bu: yaklaşık 50 bin ürün, buna karşılık yaklaşık
+  500 kategori ve 168 gün × saat hücresi. Grup sayısı arttıkça shuffle edilen ve hash tablosunda tutulan veri büyüyor.
+  Bu adım ayrıca boyut tablosu üretimi, join ve window işlemini de içeriyor. Gün × saat adımı ise neredeyse sabit
+  sürüyor: 168 grup, tam sayı anahtarlar ve tekil sayım yok.
+- **Bir metin kolonu kategori analizini 10 kat yavaşlatıyordu.** Kategori kodu ilk sürümde ana aggregation'a
+  `first(category_code)` olarak eklenmişti. Bu haliyle 5m'de 42,8 sn sürdü. Metin tipli ara değer, Spark'ın hash tabanlı
+  hızlı aggregation'ı yerine sıralama tabanlı aggregation kullanmasına yol açıyor. Etiket ayrı tabloda hesaplanıp
+  join ile eklenince süre 4,45 sn'ye düştü.
+
+Süreler Windows 11, Intel Core i5-12450H (8 çekirdek), 8 GB RAM, Java 17 ve PySpark 3.5.10 ortamında, `local[*]` ve
+4 GB Spark sürücü belleğiyle ölçüldü. Her adım 3 kez çalıştırıldı ve medyan alındı. Okuma adımı her tekrarda
+önbelleği boşaltıp Parquet'i baştan okur, diğer adımlar önbellekteki veri üzerinde çalışır.
+
+### Araştırma sorusuna katkı
+
+| Bulgu | Önerilen aksiyon |
+|---|---|
+| Sepete ekleyip almayan %17,7 | Sepet hatırlatma bildirimi ve e-postası (en kolay dönüşecek kitle) |
+| Risk altındaki müşteriler harcamanın %20,5'ini yapmış | 90+ gündür almayan değerli müşterilere geri kazanım kampanyası |
+| Dönüşüm 9–11 UTC'de yüksek, akşam trafiğinde düşük | Kampanya ve bildirimleri trafik zirvesine değil, dönüşüm zirvesine göre zamanlamak |
+| Çok görüntülenip az satan ürünler | Fiyat, stok ve ürün sayfası kontrolü. İlk 20 üründe yaklaşık 7.700 ek satış potansiyeli |
+
+**Avantaj ve dezavantaj.** Kural tabanlı RFM açıklanabilir ve hızlıdır. Segment kuralları iş birimine doğrudan
+anlatılabilir. Dezavantajı, eşiklerin elle seçilmesi ve 5 aylık veride sıklığın düşük olması. Alıcıların çoğu 1
+sipariş verdiği için F skoru az ayrışıyor. Öğrenci 4'ün veri odaklı segmentasyonu bu tabloyu
+(`data/processed/rfm/`) girdi olarak kullanabilir. Fırsat ürünleri ve saat bulguları ilişki gösterir, nedensellik
+göstermez. Önerilerin etkisi A/B testiyle doğrulanmalıdır.
 
 ## Öğrenci 4 – Satın alma olasılığı / segmentasyon modeli
 *(doldurulacak)*
