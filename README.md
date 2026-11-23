@@ -419,7 +419,164 @@ sipariş verdiği için F skoru az ayrışıyor. Öğrenci 4'ün veri odaklı se
 göstermez. Önerilerin etkisi A/B testiyle doğrulanmalıdır.
 
 ## Öğrenci 4 – Satın alma olasılığı / segmentasyon modeli
-*(doldurulacak)*
+
+**Oturum bazlı satın alma olasılığı** (ikili sınıflandırma) seçildi. Soru: *"Bir oturum, kullanıcı henüz satın
+almadan önceki davranışına bakılarak satın almaya dönüşecek mi?"* Hedef, Öğrenci 2'nin oturum tablosundaki
+`reached_purchase` (0/1). Model Spark MLlib `Pipeline` ile kuruldu. Girdi Öğrenci 2'nin
+`data/processed/sessions/{100k,1m,5m}/sessions.parquet` tablosu ve Öğrenci 1'in olay örneklemleri.
+
+```mermaid
+flowchart LR
+    E[Olay örneklemi] --> A[Eksik oturum kimliği<br/>Öğrenci 2 kuralı]
+    A --> P[İlk satın almadan ÖNCEKİ<br/>olaylardan önek özellikleri]
+    S[Öğrenci 2<br/>oturum tablosu] --> H[Window: kullanıcının<br/>önceki oturumları]
+    S --> J[JOIN<br/>user_session + user_id]
+    P --> J
+    H --> J
+    J --> X[Train %80 / Test %20<br/>seed=42, sınıf ağırlığı]
+    X --> LR[LogisticRegression]
+    X --> GBT[GBTClassifier]
+    LR & GBT --> M[AUC-ROC, AUC-PR,<br/>precision, recall, F1]
+    GBT --> I[Özellik önemi]
+```
+
+### Çalıştırma
+
+```bash
+python -m src.ogrenci2.sessions                        # oturum tabloları yoksa önce bunlar
+python -m src.ogrenci4.model                           # sadece 100k
+python -m src.ogrenci4.model --sizes 100k 1m 5m        # raporlanan sonuçlar
+```
+
+Oturum tablosu bulunamazsa kod aynı kolon adlarıyla geçici bir oturum tablosu üretir (`features.build_tmp_sessions`).
+Sonuç CSV'sindeki `kaynak` kolonu hangisinin kullanıldığını gösterir. Raporlanan sonuçlarda `ogrenci2`.
+
+### Veri sızıntısı (data leakage) ve alınan önlemler
+
+Sızıntı, modelin tahmin anında elinde olmayacak bir bilgiyi, yani cevabı, eğitimde görmesidir.
+
+1. **Hedefi doğrudan veren kolonlar kullanılmadı.** `n_purchases > 0` zaten `reached_purchase` demek, `revenue > 0`
+   da öyle. Bu iki kolon eklenince Logistic Regression'ın AUC-ROC'u **0,997** çıkıyor
+   (`LR_sizintili (gosterim)` satırı). Bu bir başarı değil, kopya.
+2. **Oturumun tamamı değil, satın alma öncesi kısmı kullanıldı.** Oturum tablosundaki `n_events`, `n_carts`,
+   `duration_sec` gibi sayılar satın alma anını ve sonrasını da içeriyor. Örneğin 100k'da satın alma anında aynı
+   saniyede ortalama 7,5 olay kaydediliyor (tek siparişte birden çok ürün). Bu yüzden satın alan oturumlarda sadece **ilk satın almadan kesin önceki** olaylar,
+   satın almayan oturumlarda tüm olaylar kullanılarak "önek" özellikleri olaylardan yeniden hesaplandı.
+3. **Önceki oturum geçmişi sadece geçmiş satırlardan alındı.** Window çerçevesi
+   `rowsBetween(unboundedPreceding, -1)`, yani bu oturum ve sonrası hesaba girmiyor.
+4. **İkinci, gizli bir sızıntı yakalandı.** Bazı oturumlar doğrudan satın alma olayıyla başlıyor (5m'de 4.296 oturum).
+   Kullanıcı ürünü önceki oturumda sepete eklemiş, ödemeyi yeni oturumda yapmış. Bu oturumların öneki boş, ve öneki
+   boş oturumların **tamamı** pozitif. Model "hiç olay yoksa satın alır" kuralını öğreniyordu. 100k'da bu düzeltme
+   öncesi GBT'nin AUC-PR'ı 0,36, sonrası 0,20. Tahmin ancak oturumda en az bir olay görüldükten sonra
+   yapılabileceği için bu oturumlar modelden çıkarıldı (sayıları `bos_onek_cikarilan` kolonunda).
+
+### Özellikler
+
+| Grup | Özellik | Açıklama |
+|---|---|---|
+| Oturum öneki | `pre_n_events`, `pre_n_views`, `pre_n_carts`, `pre_n_removes`, `pre_n_products` | Satın alma öncesi olay ve ürün sayıları |
+| | `pre_duration_sec` | İlk olaydan son önek olayına kadar geçen süre |
+| | `pre_cart_value`, `pre_net_cart` | Sepete eklenenlerin fiyat toplamı, sepete ekleme − çıkarma |
+| | `pre_cart_view_ratio`, `pre_avg_view_price` | Sepete ekleme / (görüntüleme + 1), bakılan ürünlerin ortalama fiyatı |
+| Oturum başı | `start_hour`, `start_dow` | UTC saat ve haftanın günü (Öğrenci 2 tablosundan) |
+| Kullanıcı geçmişi (window) | `prev_sessions`, `prev_purchase_sessions` | Daha önceki oturum ve satın alınan oturum sayısı |
+| | `prev_cart_no_buy_sessions` | Daha önce sepete ekleyip almadığı oturum sayısı |
+| | `hours_since_prev` | Önceki oturumun bitişinden bu yana geçen saat (yoksa 9999) |
+
+### Model ve değerlendirme kuralları
+
+- **Modeller.** `VectorAssembler → StandardScaler → LogisticRegression` (baseline, `regParam=0.01`) ve
+  `VectorAssembler → GBTClassifier` (`maxIter=50`, `maxDepth=5`). Train/test %80/%20, `seed=42`.
+- **Sınıf dengesizliği.** Satın alan oturum yaklaşık %3. `weightCol` ile iki sınıfın toplam ağırlığı eşitlendi
+  (pozitif ağırlık yaklaşık 16, negatif yaklaşık 0,5). Ağırlık olmasa model her oturuma "almaz" deyip %97 accuracy alır.
+- **Metrikler.** AUC-ROC ve AUC-PR Spark `BinaryClassificationEvaluator` ile, precision/recall/F1 pozitif sınıf için
+  0,5 eşiğinde karışıklık matrisinden hesaplandı. Accuracy yanıltıcı olduğu için "hep 0 de" tahmininin accuracy'si
+  (`hep0_accuracy`) yanına yazıldı. AUC-PR'ın rastgele model değeri pozitif oran olan yaklaşık 0,03.
+- **Süre**, `Pipeline.fit` süresidir (tek çalıştırma). Tablo hazırlama süresi ayrıca `tablo_hazirlama_sn` kolonunda.
+
+### Çıktılar
+
+- [Model metrikleri](reports/ogrenci4/model_metrikleri.csv) (boyut, model, AUC-ROC, AUC-PR, precision, recall, F1,
+  karışıklık matrisi, eğitim süresi)
+- [Özellik önemi](reports/ogrenci4/ozellik_onemi.csv) ve [grafiği](reports/ogrenci4/ozellik_onemi.png)
+- [ROC ve precision-recall eğrileri](reports/ogrenci4/roc_pr_egrisi.png) ([eğri noktaları](reports/ogrenci4/egri_noktalari.csv))
+- [Boyuta göre eğitim süresi ve AUC](reports/ogrenci4/egitim_suresi.png)
+
+### Sonuçlar
+
+| Örneklem | Model | AUC-ROC | AUC-PR | Precision | Recall | F1 | Eğitim (sn) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 100k | LogisticRegression | 0,891 | 0,147 | 0,147 | 0,685 | 0,243 | 3,6 |
+| 100k | GBT | 0,906 | 0,200 | 0,150 | 0,782 | 0,252 | 13,9 |
+| 1m | LogisticRegression | 0,906 | 0,187 | 0,173 | 0,699 | 0,277 | 2,5 |
+| 1m | GBT | 0,941 | 0,299 | 0,160 | 0,920 | 0,273 | 16,4 |
+| 5m | LogisticRegression | 0,903 | 0,191 | 0,183 | 0,701 | 0,290 | 4,8 |
+| 5m | **GBT** | **0,944** | **0,312** | 0,160 | **0,940** | 0,273 | 25,3 |
+| 5m | LR_sizintili (gösterim) | 0,997 | 0,907 | 0,770 | 0,922 | 0,839 | 3,3 |
+
+Oturum sayıları (öneki boş olanlar dahil) üç boyutta da Öğrenci 2'nin tablosuyla aynı: 24.497 / 235.059 / 1.166.225.
+Modele giren oturumlar sırasıyla 24.406 / 234.174 / 1.161.929. Satın alan oturum oranı %3,0.
+
+- **GBT, Logistic Regression'dan iyi.** 5m'de AUC-PR 0,31'e karşı 0,19. GBT, "sepete ekleme oranı yüksekse *ve*
+  önceki oturumda sepet bırakmışsa" gibi özellik etkileşimlerini ve doğrusal olmayan eşikleri öğrenebiliyor.
+  Logistic Regression ise her özelliğe tek bir doğrusal ağırlık veriyor.
+- **Model satın alanların %94'ünü yakalıyor ama işaretlediklerinin %16'sı alıyor.** 5m test setinde (232.298 oturum)
+  GBT 41.752 oturumu "alacak" diye işaretledi. Bunların 6.674'ü gerçekten aldı. 7.098 alıcının sadece 424'ü kaçtı.
+  Yani oturumların %18'ine odaklanarak alıcıların %94'üne ulaşılıyor. Rastgele seçimde %18'lik bir kitle
+  alıcıların ancak %18'ini içerirdi.
+- **Accuracy yanıltıcı.** 5m'de GBT'nin accuracy'si %84,7. Hiçbir şey öğrenmeden her oturuma "almaz" diyen tahmin
+  %96,9 alıyor ama tek bir alıcıyı bile bulmuyor. Bu yüzden AUC-PR ve recall raporlandı.
+
+**Satın almayı en çok belirleyen davranışlar** (GBT, 5m, [grafik](reports/ogrenci4/ozellik_onemi.png)):
+
+| Sıra | Özellik | Önem |
+|---:|---|---:|
+| 1 | `pre_cart_value` – sepete eklenenlerin toplam fiyatı | 0,304 |
+| 2 | `pre_cart_view_ratio` – sepete ekleme / görüntüleme | 0,286 |
+| 3 | `prev_cart_no_buy_sessions` – önceki oturumlarda sepet bırakma | 0,079 |
+| 4 | `pre_net_cart` – sepete ekleme − çıkarma | 0,062 |
+| 5 | `hours_since_prev` – önceki oturumdan bu yana geçen süre | 0,058 |
+
+İlk iki özellik birlikte önemin yaklaşık %59'unu taşıyor. İkisi de "sepete ne kadar şey konduğunu" ölçüyor ve
+birbiriyle ilişkili. Bu yüzden önem ikisi arasında boyuta göre farklı paylaşılıyor: 100k'da oran (0,37), 1m'de değer
+(0,45) öne çıkıyor, 5m'de ikisi neredeyse eşit. Tek tek sıralarından çok grup olarak yorumlanmalı.
+`prev_cart_no_buy_sessions` ise üç boyutta da ilk üçte.
+
+### Neden böyle çıktı?
+
+- **Veri büyüyünce AUC biraz arttı, sonra durdu. Eğitim süresi ise artmaya devam etti.** 100k'da test setinde sadece
+  124 alıcı oturum var. Sonuç gürültülü ve GBT'nin ağaçları az örnekten öğreniyor. 1m'de alıcı sayısı yaklaşık 1.400'e
+  çıkınca GBT AUC-ROC'u 0,906'dan 0,941'e yükseldi. 1m'den 5m'e ise sadece 0,003 arttı: 16 özellikli bir model
+  öğrenebileceği kalıbı 1m'de zaten öğrenmiş. GBT'nin eğitim süresi ise 13,9'dan 25,3 sn'ye çıktı. GBT 50 ağacı
+  sırayla kuruyor ve her ağaç bütün veriyi yeniden tarıyor. Logistic Regression'ın süresi neredeyse sabit (2,5–4,8 sn),
+  çünkü sadece 16 ağırlık öğreniyor ve en fazla 100 iterasyon yapıyor. Bu boyutlarda süreyi verinin kendisi değil,
+  Spark'ın her iterasyondaki sabit iş planlama maliyeti belirliyor.
+- **AUC-ROC yüksek, AUC-PR düşük.** AUC-ROC, rastgele seçilen bir alıcının rastgele seçilen bir alıcı olmayandan daha
+  yüksek skor alma olasılığıdır, ve %97'lik büyük negatif sınıfı doğru sıralamak bu skoru kolayca yükseltir.
+  AUC-PR ise sadece pozitif sınıfa bakar. Rastgele model 0,03 alırken GBT 0,31 alıyor, yani yaklaşık 10 kat iyi.
+  Ama precision yine de düşük, çünkü sepete ekleyip almayan çok sayıda oturum (Öğrenci 2: sepet terki %87)
+  davranış olarak alıcılara çok benziyor.
+- **Sızıntılı model neden "başarı" değil?** AUC 0,997, çünkü `n_purchases` hedefin kendisi. Gerçek kullanımda, yani
+  kullanıcı sitedeyken, bu bilgi henüz yok. Model canlıya alınınca bu performans tamamen kaybolur.
+
+### Araştırma sorusuna katkı
+
+| Bulgu | Önerilen aksiyon |
+|---|---|
+| Sepete konan değer ve sepete ekleme oranı satın almanın en güçlü işareti | Sepete ekleme yapan ama ödemeye geçmeyen oturumlarda anlık müdahale: ücretsiz kargo eşiği, "sepetin hazır" bildirimi |
+| Önceki oturumda sepet bırakmış olmak 3. sırada | Sepeti terk edenlere sonraki ziyarette sepeti hatırlatmak. Öğrenci 3'ün "sepete ekleyip hiç almayan %17,7" bulgusuyla örtüşüyor |
+| Oturumların %18'i alıcıların %94'ünü içeriyor | Kampanya ve indirim bütçesini yüksek skorlu oturumlara harcamak. Düşük skorlularda indirim, zaten alacak olana verilmiş olmaz |
+
+**Avantaj ve dezavantaj.** Avantajları şunlar: model açıklanabilir (özellik önemi), Spark MLlib ile 5 milyon olaylık
+veride yarım dakikanın altında eğitiliyor, ve aynı `Pipeline` kod değişmeden daha büyük veriye taşınabilir.
+Dezavantajları şunlar: precision düşük, bu yüzden işaretlenen oturumların çoğu almıyor ve müdahale maliyeti düşük
+olmalı (indirim değil hatırlatma gibi). Ürün ve kategori bilgisi kullanılmadı. Satın almayan oturumların öneki
+oturumun tamamı olduğu için uzun oturumlar biraz farklı ölçülüyor; daha gerçekçi bir senaryo, sabit bir anda
+(ör. ilk 10 olay) tahmin yapmak olurdu. Eşik 0,5'te sabit tutuldu; iş hedefine göre (hatırlatma mı, indirim mi)
+ayarlanmalı. Önem skorları ilişki gösterir, nedensellik göstermez; müdahalelerin etkisi A/B testiyle ölçülmelidir.
+
+Süreler macOS 27, Apple M4 (10 çekirdek), 16 GB RAM, Java 17 (Temurin), Python 3.12 ve PySpark 4.3 ortamında,
+`local[*]` ve 6 GB Spark sürücü belleğiyle (`BVA_DRIVER_MEM=6g`) ölçüldü.
 
 ## Öğrenci 5 – Funnel, görselleştirme ve performans karşılaştırması
 *(doldurulacak)*

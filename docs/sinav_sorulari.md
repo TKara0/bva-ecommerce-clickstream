@@ -27,7 +27,22 @@ E) CSV dosyalarını daha küçük hale getirmek
 *(S5, S6)*
 
 ## Öğrenci 4 – Model
-*(S7, S8)*
+
+**S7.** Oturumların yalnızca %3'ünün satın almayla bittiği veride bir model %84,7 accuracy elde etmiştir. Her oturuma
+"satın almaz" diyen ve hiçbir şey öğrenmeyen bir tahmin ise %96,9 accuracy almaktadır. Bu durum için hangisi doğrudur?
+A) Hiçbir şey öğrenmeyen tahmin daha iyidir, çünkü accuracy değeri daha yüksektir
+B) Model aşırı öğrenmiştir (overfitting), daha az veriyle eğitilmelidir
+**C) Sınıflar dengesiz olduğu için accuracy yanıltıcıdır; azınlık sınıfı ölçen AUC-PR, recall ve precision kullanılmalıdır**
+D) Accuracy yalnızca Spark MLlib'de yanlış hesaplanır, Pandas ile tekrar hesaplanmalıdır
+E) Accuracy'yi yükseltmek için pozitif sınıfın ağırlığı sıfıra indirilmelidir
+
+**S8.** Satın alma olasılığı modeline özellik olarak oturumdaki satın alma sayısı (`n_purchases`) eklenince AUC-ROC
+0,90'dan 0,997'ye çıkmıştır. Bu sonuç nasıl yorumlanmalıdır?
+A) Model artık neredeyse kusursuzdur ve doğrudan canlıya alınabilir
+**B) Veri sızıntısıdır; özellik hedefi doğrudan veriyor ve tahmin anında (kullanıcı henüz satın almamışken) bu bilgi yoktur**
+C) GBT yerine Logistic Regression kullanıldığı için AUC yükselmiştir
+D) Veri boyutu 100k'dan 5m'e çıktığı için AUC yükselmiştir
+E) Sınıf ağırlığı (`weightCol`) kullanıldığında AUC her zaman 1'e yaklaşır
 
 ## Öğrenci 5 – Funnel ve performans
 *(S9, S10)*
