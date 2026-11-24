@@ -579,4 +579,140 @@ Süreler macOS 27, Apple M4 (10 çekirdek), 16 GB RAM, Java 17 (Temurin), Python
 `local[*]` ve 6 GB Spark sürücü belleğiyle (`BVA_DRIVER_MEM=6g`) ölçüldü.
 
 ## Öğrenci 5 – Funnel, görselleştirme ve performans karşılaştırması
-*(doldurulacak)*
+
+Pandas ve PySpark motorları, CSV ve Parquet formatlarıyla birlikte **100k, 1m ve 5m** örneklem boyutlarında
+karşılaştırıldı. Amaç, aynı analitik sorgular için **"hangi veri büyüklüğünde Pandas yerine Spark mantıklı hale
+geliyor?"** sorusunu süre, bellek, throughput ve disk boyutu ölçütleriyle somutlaştırmaktır. Ek olarak Öğrenci 2'nin
+oturum/kullanıcı huni çıktıları yan yana funnel grafiğine dönüştürüldü ve Öğrenci 1–5'in tüm temel çıktıları tek
+dosyalık çevrimdışı bir HTML dashboard'da birleştirildi.
+
+```mermaid
+flowchart LR
+    S[100k / 1m / 5m<br/>CSV & Parquet] --> B[Performans Kıyaslaması<br/>Pandas vs PySpark]
+    F1[Ö1 format_karsilastirma.csv] --> B
+    B --> PCSV[performans.csv<br/>60 ölçüm · 100% doğrulama]
+    PCSV --> PG[Performans Grafikleri<br/>log süre · bellek/disk · 5m detay]
+    H2[Ö2 huni_oturum & huni_kullanici] --> FG[Funnel Grafiği<br/>oturum vs kullanıcı]
+    R14[Ö1–Ö4 Rapor ve Grafikleri] --> D[Tek Dosya HTML Dashboard<br/>dashboard.html]
+    PCSV & PG & FG --> D
+```
+
+### Çalıştırma
+
+Repo kökünde, projenin Python ortamı etkin durumdayken çalıştırın (`psutil` paketi `requirements.txt` içine eklendi).
+
+```bash
+python -m src.ogrenci5.benchmark --sizes 100k                  # önce 100k doğrulama
+python -m src.ogrenci5.benchmark --sizes 100k 1m 5m --repeat 3 # raporlanan 3 boyut ölçümü
+python -m src.ogrenci5.plots                                   # funnel ve performans grafikleri
+python -m src.ogrenci5.dashboard                               # tek dosya HTML dashboard
+```
+
+### Ölçüm ve doğrulama kuralları
+
+- **Aynı 5 sorgu, iki motorda da aynı mantık:**
+  - `Q0_tam_okuma`: 22 kolonun tamamını okuma (tam tablo bellek ve okuma yükü)
+  - `Q1_olay_tipi`: `GROUP BY event_type` ile sayım ve ortalama `price`
+  - `Q2_saatlik_olay`: `GROUP BY event_hour` ile saatlik olay ve satın alma sayısı
+  - `Q3_kullanici_satin_alma`: `event_type = 'purchase'` filtresi sonrası kullanıcı başına satın alma sayısı ve toplam harcama
+  - `Q4_oturum_donusum`: boş `user_session` dışarıda bırakılarak `(user_id, user_session)` gruplamasıyla oturum bazlı `view → cart → purchase` sayıları (5m'de ~1,16M grup)
+- **Adil kolon okuma (column pruning):** Spark Catalyst yalnızca sorguda kullanılan kolonları otomatik okuduğu için
+  Pandas tarafında da `Q1–Q4` için `columns=` (Parquet) ve `usecols=` (CSV) kullanıldı; `Q0` ise tüm 22 kolonu yükler.
+  Spark CSV okuması açık şema (`EVENTS_SCHEMA`) ile yapıldı (`inferSchema` yok).
+- **Tekrar ve önbellek temizliği:** Her kombinasyon **3 kez** çalıştırıldı ve **medyan** süre alındı. Her tekrardan önce
+  Pandas'ta `gc.collect()`, Spark'ta `spark.catalog.clearCache()` çağrılarak dosyadan bağımsız uçtan uca okuma + sorgu
+  süresi ölçüldü. Spark JVM soğuk başlatma + ısınma süresi (`7,7–8,9 sn`) sorgu sürelerinden ayrı raporlandı.
+- **Bellek ölçümü:** Pandas için hem DataFrame RAM boyutu (`df.memory_usage(deep=True)`, süre ölçümünden sonra) hem de
+  DataFrame bellekteyken süreç RSS'i (`psutil`) kaydedildi. Spark için Python + alt JVM (`java.exe`) süreç ağacının
+  toplam RSS'i ölçüldü.
+- **Sayısal doğrulama:** Her boyutta 4 kombinasyonun (Pandas/Spark × CSV/Parquet) ürettiği tüm toplam, ortalama ve
+  oturum/kullanıcı sayılarının eşleştiği otomatik doğrulandı (60/60 ölçüm `ESLESIYOR`).
+
+### Çıktılar
+
+- [Performans ölçümleri](reports/ogrenci5/performans.csv) (60 satır: boyut, motor, format, sorgu, medyan/min/max süre,
+  throughput, DataFrame belleği, süreç RSS, disk boyutu, doğrulama)
+- [Oturum vs kullanıcı dönüşüm hunisi](reports/ogrenci5/funnel_karsilastirma.png)
+- [Boyuta göre süre — log ölçek](reports/ogrenci5/performans_sure.png)
+- [Bellek ve disk karşılaştırması](reports/ogrenci5/performans_bellek_disk.png)
+- [5M sorgu bazlı süre karşılaştırması](reports/ogrenci5/performans_5m_sorgu_detay.png)
+- [Tüm ekip sonuçları HTML Dashboard](reports/ogrenci5/dashboard.html) (grafikler Base64 gömülü, çevrimdışı tek dosya)
+
+### Sonuçlar
+
+**Medyan süreler (sn, 3 tekrar):**
+
+| Boyut | Sorgu | Pandas + CSV | Pandas + Parquet | Spark + CSV | Spark + Parquet |
+|---|---|---:|---:|---:|---:|
+| **100k** | Q0 Tam okuma (22 kolon) | 0,223 | **0,033** | 0,296 | 0,192 |
+| | Q1 Olay tipi sayım + ort. fiyat | 0,105 | **0,015** | 0,271 | 0,247 |
+| | Q2 Saatlik olay & satın alma | 0,099 | **0,007** | 0,284 | 0,235 |
+| | Q3 Kullanıcı satın alma | 0,105 | **0,012** | 0,256 | 0,208 |
+| | Q4 Oturum dönüşümü | 0,135 | **0,037** | 0,458 | 0,414 |
+| | **100k Toplam (Q0–Q4)** | **0,667** | **0,104** | **1,566** | **1,296** |
+| **1m** | Q0 Tam okuma (22 kolon) | 2,602 | **0,322** | 0,752 | 0,456 |
+| | Q1 Olay tipi sayım + ort. fiyat | 1,059 | **0,085** | 0,574 | 0,504 |
+| | Q2 Saatlik olay & satın alma | 0,970 | **0,027** | 0,831 | 0,275 |
+| | Q3 Kullanıcı satın alma | 0,981 | **0,087** | 1,037 | 0,376 |
+| | Q4 Oturum dönüşümü | 1,431 | **0,381** | 4,615 | 1,045 |
+| | **1m Toplam (Q0–Q4)** | **7,043** | **0,902** | **7,810** | **2,657** |
+| **5m** | Q0 Tam okuma (22 kolon) | 13,644 | 1,924 | 1,138 | **0,987** |
+| | Q1 Olay tipi sayım + ort. fiyat | 4,983 | **0,416** | 1,044 | 0,440 |
+| | Q2 Saatlik olay & satın alma | 4,805 | **0,107** | 1,057 | 0,291 |
+| | Q3 Kullanıcı satın alma | 5,042 | **0,430** | 1,248 | 0,594 |
+| | Q4 Oturum dönüşümü (1,16M grup) | 7,873 | 2,473 | **2,215** | **2,216** |
+| | **5m Toplam (Q0–Q4)** | **36,347** | **5,350** | **6,702** | **4,527** |
+
+**Tam tablo (Q0, 22 kolon) bellek, disk (Ö1) ve 5M throughput:**
+
+| Boyut | CSV Disk | Parquet Disk | Pandas CSV DF RAM | Pandas Parquet DF RAM | Spark Parquet JVM+Py RSS |
+|---|---:|---:|---:|---:|---:|
+| **100k** | 16,6 MB | 3,0 MB (5,5× küçük) | 61,9 MB | 47,9 MB | 1.085,5 MB |
+| **1m** | 165,4 MB | 40,3 MB (4,1× küçük) | 618,6 MB | 478,5 MB | 2.812,5 MB |
+| **5m** | 827,2 MB | 206,5 MB (4,0× küçük) | **3.092,7 MB (~3,0 GB)** | **2.392,2 MB (~2,3 GB)** | 3.834,1 MB |
+
+- 5M tam tablo okuma throughput'u: **Spark + Parquet 5,07M satır/sn**, Spark + CSV 4,39M satır/sn, Pandas + Parquet 2,60M satır/sn, Pandas + CSV yalnızca **0,37M satır/sn**.
+- **Funnel görselleştirme özeti (`funnel_karsilastirma.png`):** 5M'de oturum bazlı huni `1.102.034 view → 200.102 cart (%18,16) → 27.115 purchase (%2,46)`; kullanıcı bazlı huni ise `401.335 view → 90.456 cart (%22,54) → 26.412 purchase (%6,58)`. En büyük kopma iki görünümde de `view → cart` aşamasında (oturumda %81,8, kullanıcıda %77,5 kayıp) ve ardından sepetten satın almaya geçişte (oturumda %86,4 kayıp) yaşanıyor. Kullanıcı bazlı dönüşüm, farklı oturumlardaki adımları birleştirdiği için oturum bazlı dönüşümün **~2,7 katı**.
+
+### Neden böyle çıktı? (Spark hangi boyutta mantıklı hale geliyor?)
+
+1. **100k'da Pandas + Parquet neden Spark'tan 6×–34× hızlı?** Küçük veride gerçek hesaplama birkaç milisaniye sürüyor
+   (Q2: 7 ms). Spark ise her sorguda Catalyst sorgu planlaması, görev serileştirme ve JVM iş dağıtımı için ~0,20–0,40 sn
+   sabit maliyet ödüyor; ayrıca başlangıçta ~8 sn JVM ısınma ve ~1 GB temel bellek gerekiyor.
+2. **CSV'de kesişme noktası ~1M satır:** `1m`'de Spark CSV, tam okuma (`0,75s` vs `2,60s`) ve hafif gruplamalarda Pandas
+   CSV'yi geçiyor. `5m`'de fark açılıyor: Spark CSV 5 sorguyu toplam **6,70 sn**'de bitirirken Pandas CSV **36,35 sn**
+   sürüyor (**5,4× hızlı**, tam okumada **12× hızlı**). Spark 20 mantıksal çekirdekte CSV'yi paralel ayrıştırırken Pandas
+   tek çekirdekte metin satırlarını sırayla işliyor.
+3. **Parquet'te kesişme noktası ~5M satır:** PyArrow C++ motoru ve kolon budama sayesinde Pandas + Parquet `1m`'de hâlâ
+   açık ara önde (`0,90s` vs `2,66s`) ve `5m`'nin yalnızca 2 sayısal kolon okuyan basit sorgusunda (`Q2`: `0,11s` vs
+   `0,29s`) çok hızlı. Ancak `5m`'de **tam tablo okuma (`0,99s` vs `1,92s`)**, **yüksek kardinaliteli oturum gruplama
+   (`Q4`: `2,22s` vs `2,47s`)** ve **toplam iş yükünde (`4,53s` vs `5,35s`)** Spark + Parquet öne geçiyor.
+4. **5M'de Pandas belleği neden 3,1 GB'a çıkıyor?** Pandas tüm tabloyu RAM'de tutuyor ve metin kolonları (`user_session`,
+   `event_time`, `event_type`, `brand` vb.) Python `object` nesneleri olarak saklandığı için 827 MB'lık CSV RAM'de
+   **3,7× şişiyor** (`62 MB → 619 MB → 3.093 MB`, tam doğrusal artış). Projenin tam verisi (`19,58M` satır ≈ 5M'in 3,9
+   katı) Pandas'ta ~12 GB (gruplama/kopya sırasında 20+ GB) RAM isteyip 16 GB'lık makinede bellek hatasına (OOM) yol
+   açacaktır. Spark ise veriyi parçalayarak işlediği ve gerektiğinde diske dökebildiği (`spill-to-disk`) için sabit `6g`
+   sürücü belleğiyle tam veriyi de güvenle çalıştırır.
+5. **Parquet her iki motorda da neden hızlandırıyor?** Sütun bazlı depolama sayesinde sorgu yalnızca gerekli kolonları
+   okuyor (column pruning), Snappy sıkıştırması disk G/Ç'sini ~4× azaltıyor ve veri tipleri dosya üst verisinde hazır
+   geldiği için metinden sayıya/tarihe parse maliyeti ortadan kalkıyor (`5m` Pandas'ta toplam süre CSV `36,35s` → Parquet
+   `5,35s`: **6,8× hızlanma**).
+
+### Araştırma sorusuna katkı
+
+| Bulgu | Önerilen mimari / iş aksiyonu |
+|---|---|
+| 100k–1m arası keşif sorgularında Pandas + Parquet çok hızlı; 5m+ ve tam veride (19,6M) Spark süre ve bellek güvenliğinde öne geçiyor | **Hibrit mimari:** Ham clickstream işleme, oturumlaştırma ve ML boru hatları **PySpark + Parquet**; özet rapor/keşif ve görselleştirme **Pandas + Parquet** üzerinde kurgulanmalı |
+| CSV yerine Parquet kullanımı Pandas'ta 6,8×, Spark'ta 1,5× hız ve ~4× disk tasarrufu sağlıyor | Üretim veri gölünde (data lake) CSV yalnızca ham alım katmanında bırakılmalı, tüm analitik tablolar Parquet tutulmalı |
+| Funnel ve dashboard tek görünümde %87,15 sepet terki, %17,7 sepetli almayan kitle, 09–11 UTC dönüşüm zirvesi ve %94 recall'lı GBT modelini birleştiriyor | Yönetim ve ürün ekibi kararlarını ayrı script çıktıları yerine tek dashboard üzerinden (huni + segment + model) birlikte izlemeli |
+
+**Avantaj ve dezavantaj.** Pandas'ın avantajı düşük gecikme, kolay hata ayıklama ve küçük/orta veride (özellikle Parquet
+ile) yüksek hızdır; dezavantajı tek çekirdekli çalışması ve tüm veriyi RAM'e sığdırma zorunluluğudur. Spark'ın avantajı
+çok çekirdekli/dağıtık paralelleşme, bellek taşmasında diske dökebilme ve aynı kodun kümeye taşınabilmesidir; dezavantajı
+yüksek JVM başlatma/bellek tabanı ve küçük verideki planlama ek yüküdür. Ölçümler tek düğüm (`local[*]`) üzerinde
+yapılmıştır; çok düğümlü bir kümede Spark'ın ağ (shuffle) maliyeti artarken, tek makine RAM'ini aşan onlarca GB'lık
+verilerde tek geçerli seçenek haline gelir.
+
+Süreler Windows 11, 12th Gen Intel Core i7-12700H (20 mantıksal çekirdek), 16 GB RAM, Java 17 (Temurin), Python 3.13.5,
+PySpark 4.3.0, Pandas 2.3.3 ve PyArrow 26.0.1 ortamında, `local[*]` ve 6 GB Spark sürücü belleğiyle (`BVA_DRIVER_MEM=6g`)
+ölçüldü.

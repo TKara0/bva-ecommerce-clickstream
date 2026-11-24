@@ -1,0 +1,61 @@
+boyut,satir_sayisi,motor,format,sorgu,sorgu_adi,sure_medyan_sn,sure_min_sn,sure_max_sn,throughput_satir_sn,df_bellek_mb,rss_artis_mb,toplam_rss_mb,disk_mb,spark_baslatma_sn,dogrulama,durum
+100k,99959,Pandas,CSV,Q0_tam_okuma,Tam tablo okuma (22 kolon),0.2234,0.2083,0.2364,447446.9,61.87,22.83,120.66,16.55,0.0,REFERANS,OK
+100k,99959,Pandas,Parquet,Q0_tam_okuma,Tam tablo okuma (22 kolon),0.0327,0.0324,0.5981,3052956.9,47.88,33.61,212.87,3.01,0.0,ESLESIYOR,OK
+100k,99959,Spark,CSV,Q0_tam_okuma,Tam tablo okuma (22 kolon),0.2963,0.2539,1.1779,337344.7,,45.85,852.44,16.55,7.707,ESLESIYOR,OK
+100k,99959,Spark,Parquet,Q0_tam_okuma,Tam tablo okuma (22 kolon),0.1916,0.1896,0.6754,521776.9,,3.93,1085.5,3.01,7.707,ESLESIYOR,OK
+100k,99959,Pandas,CSV,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,0.105,0.0989,0.1241,951851.8,6.0,2.11,102.35,16.55,0.0,REFERANS,OK
+100k,99959,Pandas,Parquet,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,0.0146,0.0141,0.0153,6842429.5,6.0,0.54,206.73,3.01,0.0,ESLESIYOR,OK
+100k,99959,Spark,CSV,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,0.2712,0.2343,0.9178,368628.4,,52.96,967.09,16.55,7.707,ESLESIYOR,OK
+100k,99959,Spark,Parquet,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,0.2472,0.188,0.3301,404406.4,,9.2,1164.31,3.01,7.707,ESLESIYOR,OK
+100k,99959,Pandas,CSV,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,0.0986,0.0946,0.1044,1013805.6,1.53,1.53,100.81,16.55,0.0,REFERANS,OK
+100k,99959,Pandas,Parquet,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,0.0069,0.0069,0.0071,14403314.1,0.76,0.12,207.41,3.01,0.0,ESLESIYOR,OK
+100k,99959,Spark,CSV,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,0.2836,0.2401,0.694,352408.2,,9.36,982.41,16.55,7.707,ESLESIYOR,OK
+100k,99959,Spark,Parquet,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,0.2354,0.1898,0.3569,424604.0,,1.92,1174.24,3.01,7.707,ESLESIYOR,OK
+100k,99959,Pandas,CSV,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,0.1046,0.1016,0.1083,955180.8,6.77,3.06,102.07,16.55,0.0,REFERANS,OK
+100k,99959,Pandas,Parquet,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,0.012,0.0115,0.0121,8318755.7,6.77,0.58,208.96,3.01,0.0,ESLESIYOR,OK
+100k,99959,Spark,CSV,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,0.2564,0.2134,0.5736,389891.6,,2.67,1057.43,16.55,7.707,ESLESIYOR,OK
+100k,99959,Spark,Parquet,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,0.2075,0.2031,0.4532,481749.6,,8.02,1193.46,3.01,7.707,ESLESIYOR,OK
+100k,99959,Pandas,CSV,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,0.1352,0.1338,0.1353,739407.3,11.15,9.97,109.59,16.55,0.0,REFERANS,OK
+100k,99959,Pandas,Parquet,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,0.0373,0.0346,0.0397,2683247.0,10.01,6.28,222.41,3.01,0.0,ESLESIYOR,OK
+100k,99959,Spark,CSV,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,0.4583,0.3787,0.6216,218100.2,,2.94,1063.29,16.55,7.707,ESLESIYOR,OK
+100k,99959,Spark,Parquet,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,0.4141,0.3756,0.4269,241371.5,,1.56,1198.74,3.01,7.707,ESLESIYOR,OK
+1m,999932,Pandas,CSV,Q0_tam_okuma,Tam tablo okuma (22 kolon),2.6023,2.5627,2.7971,384245.3,618.56,250.83,349.29,165.42,0.0,REFERANS,OK
+1m,999932,Pandas,Parquet,Q0_tam_okuma,Tam tablo okuma (22 kolon),0.322,0.3205,0.4904,3105341.3,478.48,123.39,608.83,40.32,0.0,ESLESIYOR,OK
+1m,999932,Spark,CSV,Q0_tam_okuma,Tam tablo okuma (22 kolon),0.7524,0.5257,2.0324,1328943.3,,407.95,1739.02,165.42,8.932,ESLESIYOR,OK
+1m,999932,Spark,Parquet,Q0_tam_okuma,Tam tablo okuma (22 kolon),0.4564,0.428,10.9465,2190760.3,,49.98,2812.46,40.32,8.932,ESLESIYOR,OK
+1m,999932,Pandas,CSV,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,1.0593,1.0023,1.0654,943971.2,60.16,15.88,115.33,165.42,0.0,REFERANS,OK
+1m,999932,Pandas,Parquet,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,0.0845,0.0835,0.1132,11830910.6,60.16,24.89,243.32,40.32,0.0,ESLESIYOR,OK
+1m,999932,Spark,CSV,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,0.5741,0.5728,1.5435,1741729.3,,176.29,2049.29,165.42,8.932,ESLESIYOR,OK
+1m,999932,Spark,Parquet,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,0.5043,0.3158,0.5049,1982632.5,,10.16,2839.58,40.32,8.932,ESLESIYOR,OK
+1m,999932,Pandas,CSV,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,0.9696,0.912,1.0141,1031240.4,15.26,15.26,115.43,165.42,0.0,REFERANS,OK
+1m,999932,Pandas,Parquet,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,0.0274,0.0268,0.0278,36477360.6,7.63,9.95,259.3,40.32,0.0,ESLESIYOR,OK
+1m,999932,Spark,CSV,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,0.8313,0.5174,1.163,1202786.8,,55.05,2504.64,165.42,8.932,ESLESIYOR,OK
+1m,999932,Spark,Parquet,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,0.2745,0.2646,0.6436,3643393.9,,5.26,1973.32,40.32,8.932,ESLESIYOR,OK
+1m,999932,Pandas,CSV,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,0.9813,0.9775,1.0129,1018985.0,67.79,26.77,125.15,165.42,0.0,REFERANS,OK
+1m,999932,Pandas,Parquet,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,0.0869,0.0864,0.0997,11511704.7,67.79,33.27,292.57,40.32,0.0,ESLESIYOR,OK
+1m,999932,Spark,CSV,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,1.0371,0.726,1.9171,964137.1,,13.61,2094.36,165.42,8.932,ESLESIYOR,OK
+1m,999932,Spark,Parquet,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,0.3763,0.2894,1.0013,2656946.5,,0.0,1746.93,40.32,8.932,ESLESIYOR,OK
+1m,999932,Pandas,CSV,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,1.4305,1.4229,1.4386,699000.0,111.56,110.33,208.77,165.42,0.0,REFERANS,OK
+1m,999932,Pandas,Parquet,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,0.3814,0.3813,0.3843,2621743.0,100.11,163.1,457.14,40.32,0.0,ESLESIYOR,OK
+1m,999932,Spark,CSV,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,4.6148,2.0684,4.8037,216679.1,,153.77,3387.35,165.42,8.932,ESLESIYOR,OK
+1m,999932,Spark,Parquet,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,1.045,0.8376,1.501,956890.9,,1.71,1735.52,40.32,8.932,ESLESIYOR,OK
+5m,4999968,Pandas,CSV,Q0_tam_okuma,Tam tablo okuma (22 kolon),13.6438,13.3353,43.9513,366465.6,3092.72,1209.17,1602.04,827.22,0.0,REFERANS,OK
+5m,4999968,Pandas,Parquet,Q0_tam_okuma,Tam tablo okuma (22 kolon),1.9236,1.841,2.079,2599278.5,2392.18,761.85,2222.0,206.53,0.0,ESLESIYOR,OK
+5m,4999968,Spark,CSV,Q0_tam_okuma,Tam tablo okuma (22 kolon),1.1382,1.102,1.1969,4392717.4,,0.0,3192.01,827.22,8.932,ESLESIYOR,OK
+5m,4999968,Spark,Parquet,Q0_tam_okuma,Tam tablo okuma (22 kolon),0.9867,0.9568,1.0346,5067521.6,,9.96,3834.06,206.53,8.932,ESLESIYOR,OK
+5m,4999968,Pandas,CSV,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,4.9832,4.862,4.9854,1003363.5,300.81,76.3,469.14,827.22,0.0,REFERANS,OK
+5m,4999968,Pandas,Parquet,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,0.4161,0.3981,0.464,12017536.1,300.81,10.67,572.65,206.53,0.0,ESLESIYOR,OK
+5m,4999968,Spark,CSV,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,1.0444,1.0333,1.3606,4787180.2,,231.13,3769.88,827.22,8.932,ESLESIYOR,OK
+5m,4999968,Spark,Parquet,Q1_olay_tipi,Olay tipine göre sayım ve ortalama fiyat,0.4397,0.4126,0.4902,11370866.8,,0.0,2521.33,206.53,8.932,ESLESIYOR,OK
+5m,4999968,Pandas,CSV,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,4.805,4.79,4.8233,1040577.4,76.29,76.3,469.18,827.22,0.0,REFERANS,OK
+5m,4999968,Pandas,Parquet,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,0.1073,0.1035,0.121,46592813.5,38.15,28.45,435.43,206.53,0.0,ESLESIYOR,OK
+5m,4999968,Spark,CSV,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,1.0569,0.998,1.4111,4730859.7,,0.0,3764.04,827.22,8.932,ESLESIYOR,OK
+5m,4999968,Spark,Parquet,Q2_saatlik_olay,Saatlik olay ve satın alma sayısı,0.2906,0.2724,0.347,17205215.1,,1.93,2336.36,206.53,8.932,ESLESIYOR,OK
+5m,4999968,Pandas,CSV,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,5.042,4.9692,5.0563,991662.5,338.96,124.34,517.54,827.22,0.0,REFERANS,OK
+5m,4999968,Pandas,Parquet,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,0.43,0.4225,0.439,11628987.3,338.96,0.0,693.63,206.53,0.0,ESLESIYOR,OK
+5m,4999968,Spark,CSV,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,1.2481,1.1518,1.5572,4006109.2,,38.89,4252.8,827.22,8.932,ESLESIYOR,OK
+5m,4999968,Spark,Parquet,Q3_kullanici_satin_alma,Kullanıcı başına satın alma ve harcama,0.5941,0.5835,0.6021,8416284.2,,243.97,2924.81,206.53,8.932,ESLESIYOR,OK
+5m,4999968,Pandas,CSV,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,7.8727,7.8644,7.9554,635101.0,557.84,552.89,945.1,827.22,0.0,REFERANS,OK
+5m,4999968,Pandas,Parquet,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,2.4728,2.4674,2.5173,2021970.6,500.61,583.75,1497.6,206.53,0.0,ESLESIYOR,OK
+5m,4999968,Spark,CSV,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,2.2146,2.1926,2.2279,2257717.7,,181.62,3791.08,827.22,8.932,ESLESIYOR,OK
+5m,4999968,Spark,Parquet,Q4_oturum_donusum,Oturum bazlı view->cart->purchase dönüşümü,2.2161,2.2149,2.2909,2256251.2,,220.68,3188.12,206.53,8.932,ESLESIYOR,OK

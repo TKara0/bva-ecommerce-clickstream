@@ -45,4 +45,21 @@ D) Veri boyutu 100k'dan 5m'e çıktığı için AUC yükselmiştir
 E) Sınıf ağırlığı (`weightCol`) kullanıldığında AUC her zaman 1'e yaklaşır
 
 ## Öğrenci 5 – Funnel ve performans
-*(S9, S10)*
+
+**S9.** 100 bin satırlık örneklemde Pandas + Parquet tüm sorgularda PySpark + Parquet'ten 6×–34× daha hızlı çalışırken,
+5 milyon satırlık örneklemde tam tablo okuma ve oturum bazlı gruplama (1,16M grup) sorgularında PySpark öne geçmiştir.
+Küçük veride PySpark'ın yavaş kalmasının, büyük veride ise öne geçmesinin temel nedeni nedir?
+A) PySpark 100 bin satırda Parquet dosyalarını okuyamadığı için önce CSV'ye çevirir
+B) Pandas 5 milyon satırda otomatik olarak tek sütun dışındaki sütunları siler
+**C) Küçük veride Spark'ın JVM başlatma, Catalyst planlama ve görev dağıtma sabit maliyeti baskındır; veri büyüdükçe Spark'ın çok çekirdekli paralel işlemesi ve dağıtık bellek yönetimi tek çekirdekli Pandas'ı geçer**
+D) PySpark yalnızca GPU üzerinde çalıştığı için küçük veride veri transferi gecikir
+E) Pandas 100 bin satırda sonuçları yaklaşık hesapladığı için daha hızlıdır
+
+**S10.** 5 milyon satırlık örneklemde diskte 827 MB yer kaplayan CSV dosyası Pandas ile tam tablo olarak okunduğunda
+DataFrame belleği yaklaşık 3,1 GB'a (3,7 kat) çıkmış; aynı veride CSV yerine Parquet kullanıldığında Pandas'ın toplam
+sorgu süresi 36,35 sn'den 5,35 sn'ye düşmüştür. Bu iki gözlemi en doğru açıklayan ifade hangisidir?
+A) Parquet dosyaları RAM'de hiç bellek kullanmadığı için 0 MB yer kaplar
+B) CSV dosyaları sıkıştırılmış olduğu için açılınca sadece sayısal kolonlar büyür
+C) Pandas Parquet okurken satırların yalnızca ilk %10'unu belleğe alır
+**D) Pandas tüm tabloyu RAM'de tutar ve metin kolonlarını Python `object` nesneleri olarak sakladığı için bellek şişer; Parquet ise sütun bazlı depolama (column pruning), sıkıştırma ve kayıtlı veri tipleri sayesinde hem disk G/Ç'sini hem parse maliyetini azaltır**
+E) CSV yalnızca PySpark'ta yavaştır, Pandas'ta CSV ile Parquet arasında hız farkı yoktur
