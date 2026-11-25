@@ -1,5 +1,58 @@
 # Proje 3 – E-Ticaret Müşteri Davranışı Analitiği
 
+## Mimari
+
+```mermaid
+flowchart TD
+    A[Kaggle: eCommerce Events History<br/>in Cosmetics Shop — 20.7M ham satır] --> B
+
+    subgraph B[Öğrenci 1 — Veri Hazırlama]
+        B1[Olay modeli + ER diyagramı]
+        B2[Veri sözlüğü]
+        B3[Örneklemler: 100k / 1m / 5m]
+        B4[Format karşılaştırma: CSV vs Parquet]
+    end
+
+    B -->|Parquet, 3 veri büyüklüğü| C
+    B -->|Olay örneklemleri| D
+    B -->|Olay örneklemleri| E
+
+    subgraph C[Öğrenci 2 — Oturum ve Huni]
+        C1[Kullanıcı oturumları]
+        C2[view → cart → purchase dönüşümü]
+        C3[Window: lag, kümülatif toplam]
+    end
+
+    C -->|Oturum tablosu| E
+
+    subgraph D[Öğrenci 3 — Segment Analizi]
+        D1[Ürün / kategori / saat kırılımı]
+        D2[RFM analizi]
+        D3[Window: rank, percent_rank]
+        D4[Broadcast hash join]
+    end
+
+    subgraph E[Öğrenci 4 — Tahmin Modeli]
+        E1[Satın alma olasılığı: LR + GBT]
+        E2[ROC/PR, özellik önemi]
+        E3[Window: rowsBetween]
+    end
+
+    C --> F
+    D --> F
+    E --> F
+
+    subgraph F[Öğrenci 5 — Karşılaştırma ve Dashboard]
+        F1[Funnel karşılaştırması]
+        F2[Performans ölçümü: 3 boyut × CSV/Parquet]
+        F3[dashboard.html — 12 grafik, Ö1-Ö5 özeti]
+    end
+
+    F --> G[Araştırma Sorusuna Ortak Cevap]
+```
+
+Ham veri Öğrenci 1 tarafından Parquet formatına dönüştürülüp üç farklı büyüklükte (100k/1m/5m) örneklenir. Öğrenci 2 bu örneklemlerden kullanıcı oturumlarını ve dönüşüm hunisini çıkarır. Öğrenci 3 olay örneklemleri üzerinde ürün, kategori, saat ve RFM segment analizi yapar; Öğrenci 4 Öğrenci 2'nin oturum tablosuyla satın alma tahmin modelini kurar. Öğrenci 5 tüm sonuçları birleştirip performans karşılaştırmasını ve nihai dashboard'u üretir.
+
 **Büyük Veri Analitiği – 2026-2027 Güz** · Selçuk Üniversitesi Teknoloji Fakültesi Bilgisayar Mühendisliği
 
 **Araştırma sorusu:** Büyük clickstream verisinden satışa dönüşümü artıracak hangi bilgiler çıkarılabilir?
