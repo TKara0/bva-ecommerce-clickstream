@@ -21,10 +21,38 @@ C) Örneklemlere yalnızca satın alma yapan kullanıcıları almak
 E) CSV dosyalarını daha küçük hale getirmek
 
 ## Öğrenci 2 – Oturumlar ve dönüşüm
-*(S3, S4)*
+**S3.** Kullanıcı oturumlarını view → cart → purchase huniye dönüştürürken, ardışık olaylar arasında 30 dakikayı
+aşan boşlukta yeni oturum bloğu açmak için PySpark'ta hangi window fonksiyonu kullanılmıştır?
+A) rank()
+B) row_number()
+C) ntile()
+**D) lag() ve kümülatif toplam**
+E) first()
+
+**S4.** Oturum bazlı huninin (`huni_oturum.csv`, 5M), bir önceki aşamaya göre ORANSAL (yüzde) kaybı en büyük olan
+adımı hangisidir?
+A) view → cart (%81,8 kayıp)
+**B) cart → purchase (%86,5 kayıp)**
+C) İkisi de eşittir
+D) Kayıp gözlemlenmemiştir
+E) Veri setinde sepet verisi bulunmamaktadır
 
 ## Öğrenci 3 – Ürün / kategori / saat / segment
-*(S5, S6)*
+**S5.** RFM segmentasyonunda müşterileri çeyreklere ayırmak için `ntile()` yerine `percent_rank()` tercih
+edilmesinin temel nedeni nedir?
+A) ntile() Spark'ta mevcut değildir
+B) percent_rank() daha hızlı çalışır
+**C) Alıcıların çoğu tek sipariş verdiği için ntile() aynı değerdeki müşterileri keyfi farklı çeyreklere bölerdi; percent_rank() eşit değerlere aynı sırayı verir**
+D) ntile() sadece tam sayı sütunlarda çalışır
+E) percent_rank() negatif değer üretmez
+
+**S6.** Ürün bazlı top-10 listelerini çıkarmak için küçük ürün boyut tablosu (dim_product) büyük olay tablosuyla
+birleştirilirken Spark'ın seçtiği fiziksel join stratejisi nedir?
+A) Sort Merge Join
+**B) Broadcast Hash Join — küçük tablo her executor'a kopyalanır, büyük tablo shuffle edilmez**
+C) Shuffle Hash Join
+D) Cartesian Join
+E) Nested Loop Join
 
 ## Öğrenci 4 – Model
 
