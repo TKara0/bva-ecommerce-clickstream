@@ -93,6 +93,10 @@ bash scripts/run_ogrenci1.sh           # hazırlama + örneklemler + raporlar
 
 Kaggle CLI kullanmadan: sayfadan zip'i elle indirip CSV'leri `data/raw/` içine atman yeterli.
 
+Takım içi hızlı kurulum için `docs/BASLANGIC.md`'de belirtilen Drive'daki `samples.zip` dosyası da kullanılabilir;
+bu durumda Kaggle'dan tekrar indirme ve `scripts/run_ogrenci1.sh` çalıştırma adımları atlanabilir, zip doğrudan
+`data/processed/samples/{100k,1m,5m}/` altına açılır.
+
 ## Klasör yapısı
 
 ```
@@ -797,3 +801,21 @@ verilerde tek geçerli seçenek haline gelir.
 Süreler Windows 11, 12th Gen Intel Core i7-12700H (20 mantıksal çekirdek), 16 GB RAM, Java 17 (Temurin), Python 3.13.5,
 PySpark 4.3.0, Pandas 2.3.3 ve PyArrow 26.0.1 ortamında, `local[*]` ve 6 GB Spark sürücü belleğiyle (`BVA_DRIVER_MEM=6g`)
 ölçüldü.
+
+## Katkı ve Sunan Öğrenciler
+
+| Öğrenci No | Ad Soyad | Bölüm |
+|---|---|---|
+| [Öğrenci No] | Talha Kara | Öğrenci 1 — Veri hazırlama ve olay modelleme |
+| [Öğrenci No] | Hakan Tekelioğlu | Öğrenci 2 — Oturumlar ve dönüşüm |
+| [Öğrenci No] | Halit Kılıç | Öğrenci 3 — Ürün/kategori/saat/RFM segment analizi |
+| [Öğrenci No] | Ali Özel | Öğrenci 4 — Satın alma olasılığı modeli |
+| [Öğrenci No] | Barkın Arı | Öğrenci 5 — Performans karşılaştırması ve dashboard |
+
+## Araştırma Sorusuna Ortak Cevap
+
+Dönüşümü artıracak en güçlü işaretler sepete konan değer ve sepete ekleme oranıdır (Öğrenci 4); sepete ekleyip
+hiç satın almayan %17,7'lik kitle en kolay dönüştürülebilir kitledir (Öğrenci 3); kampanya ve bildirimler trafik
+zirvesine değil 09-11 UTC arasındaki dönüşüm zirvesine göre zamanlanmalıdır (Öğrenci 3). Veri işleme tarafında
+Parquet formatı ve Spark motoru, 5 milyon satır ve üzerinde hem süre hem bellek güvenliği sağlamaktadır
+(Öğrenci 1, Öğrenci 5). Bulgular ilişkiseldir; önerilen aksiyonların etkisi A/B testiyle doğrulanmalıdır.
