@@ -314,6 +314,34 @@ kapsıyor. Küçük bir Spark işiyle ısınma yapıldı. 100k'nın 1m'den yava�
 planlama ve JVM ısınma maliyetleri etkili olabilir. 5m'de daha büyük gruplama ve bölümleme işi ile daha fazla
 Parquet yazımı toplam süreyi artırıyor.
 
+Ö2'nin tek seferlik ölçümü örneklem başına uçtan uca oturum tablosu üretim süresini gösteriyor. Ö3 ve Ö5 kıyaslamada çalıştırmalar arası oynaklığı azaltmak için üç tekrarın medyanını kullanıyor.
+
+### Neden böyle çıktı?
+
+100k, 1m ve 5m örneklemlerinde oturum hunisinin view → cart dönüşümü sırasıyla %18,09, %18,49 ve %18,16,
+cart → purchase dönüşümü %13,14, %13,30 ve %13,55. Kullanıcı hunisinde aynı oranlar view → cart için
+%22,87, %22,55 ve %22,54, cart → purchase için %28,20, %28,74 ve %29,20. Üç örneklemin tamamında
+önceki aşamaya göre oransal kayıp oturum hunisinde cart → purchase, kullanıcı hunisinde view → cart adımında
+daha büyük. İlk aşamanın tabanı daha geniş olduğu için kaybedilen oturum ve kullanıcı sayısı ise view → cart
+adımında daha yüksek.
+
+Ürün ve fiyat karşılaştırması, görüntülemelerin bir bölümünün sepete eklemeye dönüşmemesini açıklayabilir.
+Kargo ücreti veya ödeme sırasında yaşanan zorluklar, sepetli oturumların satın almayla sonuçlanmamasının olası
+nedenleri. Kullanıcı hunisi farklı oturumlardaki olayları birleştirdiği için sonraki ziyaretlerdeki satın almaları da
+kapsıyor. Ödeme adımlarının etkisini sınamak için bu kozmetik mağazasının olay kayıtlarına ek veri gerekir.
+
+### Araştırma sorusuna katkı
+
+Kullanıcı bazında en büyük oransal kayıp görüntülemeden sepete geçişte olduğu için ürün sayfası veya fiyat
+sunumu değişikliklerinin etkisi view → cart oranıyla sınanabilir. Sepet hatırlatmalarının etkisi, farklı
+ziyaretleri kapsayan kullanıcı bazlı cart → purchase oranıyla ölçülebilir.
+
+**Avantaj ve dezavantaj.** Oturum hunisi tek ziyarette hangi aşamada kayıp olduğunu gösteriyor. `lag` ve
+kümülatif toplam, olayları zaman sırasına göre bloklayarak eksik kimlikli olayları analize katmayı sağlıyor.
+Eksik kimlikler için seçilen 30 dakikalık eşik, aynı ziyareti bölebilir veya ayrı ziyaretleri birleştirebilir.
+Huni farklı sırada gerçekleşen veya farklı ürünlere ait olayları aynı dönüşümde sayabilir. Pencere fonksiyonları
+için verinin kullanıcıya göre yeniden dağıtılması (shuffle) ve sıralanması, veri büyüdükçe maliyeti artırıyor.
+
 ## Öğrenci 3 – Spark ile ürün/kategori/saat/segment analizi
 
 PySpark ile olaylar dört boyutta incelendi: ürün, kategori/marka, haftanın günü × saat ve müşteri segmenti (RFM).
