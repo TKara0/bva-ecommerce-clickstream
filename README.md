@@ -416,7 +416,8 @@ python -m src.ogrenci3.analiz --sizes 100k 1m 5m --repeat 3  # raporlanan sonuç
 
 ### Çıktılar
 
-- [Top-10 ürünler](reports/ogrenci3/top_urunler.csv) ve [fırsat ürünleri](reports/ogrenci3/firsat_urunleri.csv)
+- [Top-10 ürünler](reports/ogrenci3/top_urunler.csv), [fırsat ürünleri](reports/ogrenci3/firsat_urunleri.csv) ve
+  [grafiği](reports/ogrenci3/firsat_urunleri.png)
 - [Kategori dönüşümü](reports/ogrenci3/kategori_donusum.csv) ve [grafiği](reports/ogrenci3/kategori_donusum.png),
   [marka dönüşümü](reports/ogrenci3/marka_donusum.csv)
 - [Gün × saat tablosu](reports/ogrenci3/saat_gun.csv) ve [ısı haritası](reports/ogrenci3/saat_gun_isi_haritasi.png)

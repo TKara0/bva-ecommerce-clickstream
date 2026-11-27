@@ -338,6 +338,34 @@ def grafik_kategori(kat, boyut, adet=12):
     fig.savefig(REPORT_DIR / "kategori_donusum.png", dpi=150)
 
 
+def grafik_firsat(firsat, boyut, adet=10):
+    """Çok görüntülenip az satan ürünler: dönüşüm, popüler ürünlerin medyan dönüşümüyle karşılaştırılır."""
+    f = firsat.head(adet).iloc[::-1].copy()
+    medyan = f["populer_medyan_donusum"].iloc[0] * 100
+    f["etiket"] = [f"{p} · {b if isinstance(b, str) else 'markasız'} · {fiyat:.2f}"
+                   for p, b, fiyat in zip(f["product_id"], f["brand"], f["last_price"])]
+    fig = Figure(figsize=(11, 5.2))
+    ax = fig.add_subplot()
+    ax.barh(f["etiket"], f["donusum"] * 100, color=TURUNCU, height=0.6)
+    ax.axvline(medyan, color=MUREKKEP_2, linewidth=1.2, linestyle="--",
+               label=f"Popüler ürünlerin medyan dönüşümü (%{medyan:.1f})".replace(".", ","))
+    sag = max(medyan, (f["donusum"] * 100).max()) * 1.06   # açıklamalar çizginin sağında hizalı
+    for i, (d, v, ek) in enumerate(zip(f["donusum"] * 100, f["view"], f["potansiyel_ek_satis"])):
+        ax.text(d, i, f" %{d:.1f}".replace(".", ","), va="center", fontsize=8, color=MUREKKEP)
+        ax.text(sag, i, f"{v:,.0f} görüntüleme · +{ek:,.0f} satış potansiyeli".replace(",", "."),
+                va="center", fontsize=8, color=MUREKKEP_2)
+    ax.set_xlim(0, sag * 2.05)
+    ax.set_xticks([t for t in ax.get_xticks() if t <= sag])
+    ax.legend(frameon=False, loc="lower right", fontsize=8)
+    ax.set_xlabel("Dönüşüm: purchase / view (%)")
+    _eksen_sade(ax)
+    toplam = firsat["potansiyel_ek_satis"].sum()
+    ax.set_title(f"Çok görüntülenip az satan ürünler ({boyut}) · ilk {len(firsat)} üründe "
+                 f"~{toplam:,.0f} ek satış potansiyeli".replace(",", "."), loc="left", fontweight="bold")
+    fig.tight_layout()
+    fig.savefig(REPORT_DIR / "firsat_urunleri.png", dpi=150)
+
+
 def grafik_sureler(sureler):
     if sureler["boyut"].nunique() < 2:
         return
@@ -441,6 +469,7 @@ def main():
     grafik_saat_gun(son["saat_gun"], en_buyuk)
     grafik_segment(son["rfm_segmentler"], en_buyuk)
     grafik_kategori(son["kategori_donusum"], en_buyuk)
+    grafik_firsat(son["firsat_urunleri"], en_buyuk)
     grafik_sureler(pd.read_csv(REPORT_DIR / "sureler.csv"))
     print(f"Bitti -> {REPORT_DIR}  |  RFM -> {RFM_DIR}")
 
